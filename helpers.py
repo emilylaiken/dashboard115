@@ -1,10 +1,6 @@
 import html
 import os
 import plotly
-import socket
-
-from twython import Twython
-from twython import TwythonAuthError, TwythonError, TwythonRateLimitError
 
 
 def calls_by_type(hc_workers, public):
