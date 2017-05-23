@@ -4,7 +4,6 @@ import sqlite3
 from flask import Flask, redirect, render_template, request, url_for
 
 import helpers
-from analyzer import Analyzer
 
 app = Flask(__name__)
 
