@@ -1,6 +1,8 @@
 import os
 import csv
 import sqlite3
+import time
+import datetime
 from flask import Flask, redirect, render_template, request, url_for
 
 import helpers
@@ -18,7 +20,7 @@ def parseDateTime(fulldate):
                 day = backwards_date[0:2]
                 month = backwards_date[3:5]
                 year = backwards_date[6:10]
-                forwards_date = month + '/' + day + '/' + year
+                forwards_date = year + '-' + month + '-' + day
                 return forwards_date, fulldate[i:len(fulldate)]
     return "", ""
 
@@ -38,15 +40,16 @@ def deleteStar(disease_report):
 def column(matrix, i):
     return [row[i] for row in matrix]
 
-def loadData():
+def loadData(data_file_name):
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS calls (call_id integer primary key, date date, time time, week_id varchar, duration integer, caller_id integer, status varchar, type varchar);")
+    
+    cur.execute("CREATE TABLE IF NOT EXISTS calls (call_id integer primary key, date varchar, time time, week_id varchar, duration integer, caller_id integer, status varchar, type varchar);")
     cur.execute("CREATE TABLE IF NOT EXISTS hc_reports (call_id integer primary key, level_worker integer, completed varchar, disease_type integer, diarrhea_cases integer, diarrhea_deaths integer, fever_cases integer, fever_deaths integer, flaccid_cases integer, flaccid_deaths integer, respiratory_cases integer, respiratory_deaths integer, dengue_cases integer, dengue_deaths integer, meningitis_cases integer, meningitis_deaths integer, jaundice_cases integer, jaundice_deaths integer, diphteria_cases integer, diphteria_deaths integer, rabies_cases integer, rabies_deaths integer, neonatal_cases integer, neonatal_deaths integer);")
     cur.execute("CREATE TABLE IF NOT EXISTS  public_interactions (call_id integer primarykey, hotline_menu integer, disease_menu integer, h5n1_menu integer, h5n1_overview_menu integer, h5n1_prevention_menu integer, mers_menu integer, mers_overview_menu integer, mers_prevention_menu integer, zika_menu integer, zika_overview_menu integer, zika_prevention_menu integer, public_report_confirmation integer);")
     cur.execute("SELECT Max(date) FROM calls")
     max_date = cur.fetchall()[0][0];
-    with open('rawcalls.csv', 'rU') as fin: # In-file is rawcalls.csv
+    with open(data_file_name, 'rU') as fin: # In-file is rawcalls.csv
         dr = csv.DictReader(fin) # First line is used as column headers by default
         prev_date = ""
         week_id = ""
@@ -101,62 +104,84 @@ def loadData():
 # Controls what happens on the loading of the dashboard--new data is read in, visualizations are produced
 @app.route("/")
 def index():
+    time_period = "week"
+    time_period = request.args.get('time')
+    current_date = datetime.date.today() - datetime.timedelta(weeks = 16)
+    if time_period == "week":
+        starting_date = current_date - datetime.timedelta(weeks = 1)
+    elif time_period == "month":
+        starting_date = current_date - datetime.timedelta(weeks = 4)
+    elif time_period == "quarter":
+        starting_date = current_date - datetime.timedelta(weeks = 12)
+    else:
+        starting_date = current_date - datetime.timedelta(weeks = 56)
+    starting_date_string = starting_date.strftime("%Y-%m-%d")
     #Load additional call logs if there are any and open database
-    loadData()
+    #loadData("rawwcallsyear.csv")
+    #loadData("rawcalls.csv")
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
     #print pd.read_sql_query("SELECT week_id, count(call_id) FROM calls GROUP BY week_id ORDER BY week_id", con)
 
-    #Generate first chart (pie chart of calls by type--HC worker vs public)
-    cur.execute("SELECT type, count(call_id) FROM calls GROUP BY type;")
-    rows = cur.fetchall()
-    hc_worker = rows[0][1]
-    public = rows[1][1]
-    chart1 = helpers.calls_by_type(hc_worker, public)
-
-    #Generate second chart (line chart of calls to public hotline by day)
-    cur.execute("SELECT date, count(call_id) FROM calls WHERE type='public' GROUP BY date;")
+    charts = []
+    #Generate chart of all calls to public hotline
+    statement = "SELECT date, count(call_id) FROM calls WHERE type='public' AND date >=" + "'" + starting_date_string + "'" + " GROUP BY date ORDER BY date desc;"
+    cur.execute(statement)
     calls_by_date = cur.fetchall()
     dates = []
     numcalls = []
     for log in calls_by_date:
         dates = dates + [log[0]]
         numcalls = numcalls + [log[1]]
-    chart2 = helpers.calls_by_day(dates, numcalls, "Calls to Public Hotline by Day")
+    charts.append(helpers.calls_by_day(dates, numcalls, "Calls to Public Hotline"))
 
     #Generate third chart (line chart of visits to each disease menu by day)
-    cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE h5n1_menu NOT NULL GROUP BY date;")
-    h5n1_visits = cur.fetchall()
-    cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE mers_menu NOT NULL GROUP BY date;")
-    mers_visits = cur.fetchall()
-    cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE zika_menu NOT NULL GROUP BY date;")
-    zika_visits = cur.fetchall()
-    dates = column(h5n1_visits, 0)
-    h5n1 = column(h5n1_visits, 1)
-    mers = column(mers_visits, 1)
-    zika = column(zika_visits, 1)
-    chart3 = helpers.menu_visits_by_day(dates, h5n1, mers, zika)
+    #cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE h5n1_menu NOT NULL GROUP BY date;")
+    #h5n1_visits = cur.fetchall()
+    #cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE mers_menu NOT NULL GROUP BY date;")
+    #mers_visits = cur.fetchall()
+    #cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE zika_menu NOT NULL GROUP BY date;")
+    #zika_visits = cur.fetchall()
+    #dates = column(h5n1_visits, 0)
+    #h5n1 = column(h5n1_visits, 1)
+    #mers = column(mers_visits, 1)
+    #zika = column(zika_visits, 1)
+    #chart3 = helpers.menu_visits_by_day(dates, h5n1, mers, zika)
+
+    #Generate disease charts (tracking visits to overview and prevention information)
+    public_diseases = ["h5n1", "mers", "zika"]
+    for disease in public_diseases:
+        menu_string = disease + "_menu"
+        overview_string = disease + "_overview_menu"
+        prevention_string = disease + "_prevention_menu"
+        cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND(" + menu_string + "=1 OR " + overview_string + "=1 OR " + prevention_string + "=2) GROUP BY date ORDER BY date desc;")
+        overview_visits = cur.fetchall()
+        cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND(" + menu_string + "=2 OR " + overview_string + "=2 OR " + prevention_string + "=1) GROUP BY date ORDER BY date desc;")
+        prevention_visits = cur.fetchall()
+        dates = column(overview_visits, 0)
+        overview = column(overview_visits, 1)
+        prevention = column(prevention_visits, 1)
+        disease_chart = helpers.overview_and_prevention_by_day(dates, overview, prevention, disease)
+        charts.append(disease_chart)
 
     #Generate fourth chart (success rate of calls)
-    cur.execute("SELECT status, count(call_id) FROM calls WHERE type='public' GROUP BY status;")
-    statuses = cur.fetchall()
-    for r in statuses:
-        print r
-    chart4 = helpers.calls_by_status(column(statuses, 0), column(statuses, 1));
+    #cur.execute("SELECT status, count(call_id) FROM calls WHERE type='public' GROUP BY status;")
+    #statuses = cur.fetchall()
+    #charts.append(helpers.calls_by_status(column(statuses, 0), column(statuses, 1)))
 
     #Generate fifth chart (public reports by day)
-    cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE public_report_confirmation='0' GROUP BY date;")
+    cur.execute("SELECT date, count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + "AND public_report_confirmation='0' GROUP BY date ORDER BY date desc;")
     calls_by_date = cur.fetchall()
     dates = []
     numcalls = []
     for log in calls_by_date:
         dates = dates + [log[0]]
         numcalls = numcalls + [log[1]]
-    chart5 = helpers.calls_by_day(dates, numcalls, "Public Reports by Day")
+    charts.append(helpers.calls_by_day(dates, numcalls, "Public Reports by Day"))
 
     #Close database and render HTML template
     con.close()
-    return render_template("index.html", name="", chart2=chart2, chart3=chart3, chart4=chart4, chart5=chart5)
+    return render_template("index.html", name="", charts = charts)
 
 
 @app.route("/hcreports")
@@ -167,9 +192,9 @@ def hcreports():
     #print pd.read_sql_query("SELECT week_id, count(call_id) FROM calls GROUP BY week_id ORDER BY week_id", con)
 
     #Generate first chart: attempted & completed HC reports by week
-    cur.execute("SELECT week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE completed = 'true' GROUP BY week_id;")
+    cur.execute("SELECT week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE completed = 'true' GROUP BY week_id ORDER BY week_id desc;")
     completed_reports_by_week = cur.fetchall()
-    cur.execute("SELECT week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id GROUP BY week_id;")
+    cur.execute("SELECT week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id GROUP BY week_id ORDER BY week_id desc;")
     attempted_reports_by_week = cur.fetchall()
     weeks = column(completed_reports_by_week, 0)
     completed = column(completed_reports_by_week, 1)

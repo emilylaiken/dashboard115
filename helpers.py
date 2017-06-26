@@ -54,6 +54,20 @@ def menu_visits_by_day(dates, h5n1, mers, zika):
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
+def overview_and_prevention_by_day(dates, overview, prevention, title):
+    figure = {
+        "data": [
+            {'x': dates, 'y': overview, 'name': "Overview Information"},
+            {'x': dates, 'y': prevention, 'name': "Prevention Information"},
+        ],
+        "layout": {
+            "title": "Visits to Prevention/Overview Information by Day - " + title,
+            "showlegend": True,
+
+        }
+    }
+    return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
+
 def calls_by_status(labels, data):
     figure = {
         "data": [

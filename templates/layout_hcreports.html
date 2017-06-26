@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+        <!-- http://getbootstrap.com/ -->
+        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
+        <link href="navbar.css" rel="stylesheet">
+        <meta charset="utf-8"/>
+        <meta content="initial-scale=1, width=device-width" name="viewport"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <title>115 Analytics Dashboard</title>
+    </head>
+    <body>
+        <div class="container">
+            <div class="page-header">
+                <h1>
+                    115 Analytics Dashboard
+                    <small>{% block subtext %}{% endblock %}</small>
+                </h1>
+                <nav class="navbar navbar-default">
+                    <div class="container-fluid">
+                        <div id="navbar" class="navbar-collapse collapse">
+                            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                                <ul class="nav navbar-nav">
+                                    <li><a href="/">Public Hotline </a></li>
+                                    <li class="active"><a href="/hcreports">HC Worker Reports<span class="sr-only">(current)</span></a></li>
+                                </ul>
+                                <ul class="nav navbar-nav navbar-right">
+                                    <li><a href="#">Past Day</a></li>
+                                    <li><a href="/hcreports?time=week">Past Week</a></li>
+                                    <li><a href="/hcreports?time=month">Past Month</a></li>
+                                    <li><a href="/hcreports?time=quarter">Past Quarter</a></li>
+                                    <li><a href="/hcreports?time=year">Past Year</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div><!-- /.navbar-collapse -->
+                </nav>
+            </div>
+            {% block body %}{% endblock %}
+        </div>
+    </body>
+</html>

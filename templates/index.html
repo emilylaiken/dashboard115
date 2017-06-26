@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "layout_index.html" %}
 
 {% block subtext %}
 {{ name }}
@@ -6,8 +6,7 @@
 
 {% block body %}
 <!--{{ chart1 | safe }} -->
-{{ chart2 | safe }}
-{{ chart3 | safe }}
-{{ chart4 | safe }}
-{{ chart5 | safe }}
+	{% for chart in charts %}
+		{{ chart | safe }}
+	{% endfor %}
 {% endblock %}
