@@ -6,7 +6,6 @@ import time
 import datetime
 from flask import Flask, redirect, render_template, request, url_for
 import sys
-from flask_socketio import SocketIO, emit
 
 
 import helpers
