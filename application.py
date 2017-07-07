@@ -11,8 +11,6 @@ import sys
 import helpers
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
 
 # Takes the combined date-time cell in the CSV and parses it into two separate objects
 def parseDateTime(fulldate):
