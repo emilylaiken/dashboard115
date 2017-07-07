@@ -1,0 +1,12 @@
+{% extends "layout_public.html" %}
+
+{% block subtext %}
+{{ name }}
+{% endblock %}
+
+{% block body %}
+<!--{{ chart1 | safe }} -->
+	{% for chart in charts %}
+		{{ chart | safe }}
+	{% endfor %}
+{% endblock %}
