@@ -16,8 +16,7 @@ import helpers
 
 #App configurations--set folders and allowed extensions for file uploads
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads/'
-app.config['ALLOWED_EXTENSIONS'] = set(['csv'])
+
 
 # Helper functions used in all pages for dynamically generating URLs for Overview and Public pages
 def overview_url():
@@ -611,6 +610,9 @@ def dataload():
 
 # Run application
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
     app.secret_key = os.urandom(12)
+    app.config['UPLOAD_FOLDER'] = 'uploads/'
+    app.config['ALLOWED_EXTENSIONS'] = set(['csv'])
+    app.config['SESSION_TYPE'] = 'filesystem'
+    port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
