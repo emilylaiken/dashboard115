@@ -14,3 +14,6 @@ nltk==3.2.3
 pbr==1.10.0
 plotly==2.0.8
 Werkzeug==0.11.11
+pyPdf==1.13
+reportlab==3.4.0
+fpdf==1.7.2
