@@ -608,11 +608,11 @@ def dataload():
         return render_template("uploadfail.html")
     return render_template("uploadcomplete.html")
 
+app.secret_key = os.urandom(12)
+app.config['UPLOAD_FOLDER'] = 'uploads/'
+app.config['ALLOWED_EXTENSIONS'] = set(['csv'])
+app.config['SESSION_TYPE'] = 'filesystem'
 # Run application
 if __name__ == "__main__":
-    app.secret_key = os.urandom(12)
-    app.config['UPLOAD_FOLDER'] = 'uploads/'
-    app.config['ALLOWED_EXTENSIONS'] = set(['csv'])
-    app.config['SESSION_TYPE'] = 'filesystem'
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
