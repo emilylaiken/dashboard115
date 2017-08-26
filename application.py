@@ -608,7 +608,7 @@ def dataload():
         return render_template("uploadfail.html")
     return render_template("uploadcomplete.html")
 
-app.secret_key = os.urandom(12)
+app.secret_key = 'secret key'
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 app.config['ALLOWED_EXTENSIONS'] = set(['csv'])
 app.config['SESSION_TYPE'] = 'filesystem'
