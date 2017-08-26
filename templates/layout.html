@@ -1,43 +1,37 @@
 <!DOCTYPE html>
+<html dir="ltr" lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <title>115 Analytics Dashboard</title>
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" media="all" href="/static/daterangepicker.css" />
+  </head>
 
-<html lang="en">
-    <head>
-        <!-- http://getbootstrap.com/ -->
-        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
-        <link href="navbar.css" rel="stylesheet">
-        <meta charset="utf-8"/>
-        <meta content="initial-scale=1, width=device-width" name="viewport"/>
-        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-        <title>115 Analytics Dashboard</title>
-    </head>
-    <body>
-        <div class="container">
-            <div class="page-header">
-                <h1>
-                    115 Analytics Dashboard
-                    <small>{% block subtext %}{% endblock %}</small>
-                </h1>
-                <nav class="navbar navbar-default">
-                    <div class="container-fluid">
-                        <div id="navbar" class="navbar-collapse collapse">
-                            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-                                <ul class="nav navbar-nav">
-                                    <li><a href="/">Public Hotline <span class="sr-only">(current)</span></a></li>
-                                    <li><a href="/hcreports">HC Worker Reports</a></li>
-                                </ul>
-                                <ul class="nav navbar-nav navbar-right">
-                                    <li class="active"><a href="#">Past Day<span class="sr-only">(current)</span></a></li>
-                                    <li><a href="/?time=week">Past Week</a></li>
-                                    <li><a href="/?time=month">Past Month</a></li>
-                                    <li><a href="/?time=quarter">Past Quarter</a></li>
-                                    <li><a href="/?time=year">Past Year</a></li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div><!-- /.navbar-collapse -->
-                </nav>
+  <body style="margin: 60px 0">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+    <script type="text/javascript" src="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src={{ url_for('static', filename="js/moment.js")}}></script>
+    <script type="text/javascript" src={{ url_for('static', filename="js/daterangepicker.js")}}></script>
+    <div class="container">
+      <div class="page-header">
+        <h1>
+          115 Analytics Dashboard
+        </h1>
+        <nav class="navbar navbar-default">
+          <div class="container-fluid">
+            <div id="navbar" class="navbar-collapse collapse">
+              <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                {% block navbarleft %}{% endblock %}
+                <ul class="nav navbar-nav navbar-right">
+                  {% block durationfilter %}{% endblock %}
+                  {% block datepicker %}{% endblock %}
+                </ul>
+              </div>
             </div>
-            {% block body %}{% endblock %}
-        </div>
-    </body>
+          </div>
+        </nav>
+      </div>
+      {% block body %}{% endblock %}
+    </div>
+  </body>
 </html>

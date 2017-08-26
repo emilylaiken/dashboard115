@@ -1,12 +1,31 @@
-{% extends "layout_index.html" %}
+<!DOCTYPE html>
+<html dir="ltr" lang="en-US">
 
-{% block subtext %}
-{{ name }}
-{% endblock %}
+   <head>
+      <meta charset="UTF-8" />
+      <title>115 Analytics Dashboard</title>
+      <link href="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+   </head>
 
-{% block body %}
-<!--{{ chart1 | safe }} -->
-	{% for chart in charts %}
-		{{ chart | safe }}
-	{% endfor %}
-{% endblock %}
+   <body style="margin: 60px 0">
+      <div class="container">
+        <div class="page-header">
+          <h1>
+            Login to 115 Analytics Dashboard
+           </h1>
+        </div>
+       	<form action="" method="POST">
+		      <div class="form-group">
+		        <label for="username">Username:</label>
+		        <input class="form-control" id="username" name="username">
+		      </div>
+		      <div class="form-group">
+		        <label for="password">Password:</label>
+		        <input type="password" class="form-control" id="password" name="password">
+		      </div>
+		      <button type="submit" class="btn btn-default">Submit</button>
+		    </form>
+      </div>
+    </body>
+
+</html>

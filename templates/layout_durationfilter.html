@@ -1,0 +1,46 @@
+{% extends "layout_datepicker.html" %}
+
+{% block durationfilter %}
+    <li class="dropdown">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Filter Duration <span class="caret"></span></a>
+        <ul class="dropdown-menu">
+        	<!-- Calculate URLs for duration filter dynamically -->
+        	<script>
+        		var getUrlParameter = function getUrlParameter(sParam) {
+                    var sPageURL = decodeURIComponent(window.location.search.substring(1)), sURLVariables = sPageURL.split('&'), sParameterName, i;
+                    for (i = 0; i < sURLVariables.length; i++) {
+                        sParameterName = sURLVariables[i].split('=');
+                        if (sParameterName[0] === sParam) {
+                            return sParameterName[1] === undefined ? true : sParameterName[1];
+                        }
+                    }
+                };
+ 				function getUrl(durationstart, durationend) {
+ 					var dateStart = "none"
+ 					var dateEnd = "none"
+ 					if (getUrlParameter('datestart') != true) {
+                        datestart = getUrlParameter('datestart')
+                    }
+                    if (getUrlParameter('dateend') != true) {
+                        dateend = getUrlParameter('dateend')
+                    }
+                    url = window.location.href;
+                    if (url.includes('overview')) {
+                        window.location='/overview?' + 'datestart=' + datestart + '&dateend=' + dateend + "&durationstart=" + durationstart + "&durationend=" + durationend;
+                    }
+                    else {
+                        window.location='/public?' + 'datestart=' + datestart + '&dateend=' + dateend + "&durationstart=" + durationstart + "&durationend=" + durationend;
+                    }
+  					return false;
+  				}
+			</script>
+            <!-- Three pre-selected duration ranges: 0-5 minutes, 5-10 minutes, and 10+ minutes, as well as all calls -->
+        	<li><a onclick="getUrl(0, 5)" href="#">0 - 5 minutes</a></li>
+            <li><a onclick="getUrl(5, 10)" href="#">5 - 10 minutes</a></li>
+            <li><a onclick="getUrl(10, 'end')" href="#">10+ minutes</a></li>
+            <li role="separator" class="divider"></li>
+            <li><a onclick="getUrl(0, 'end')" href="#">All</a></li>
+        </ul>
+    </li>
+{% endblock %}
+

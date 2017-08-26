@@ -1,0 +1,21 @@
+{% extends "layout_durationfilter.html" %}
+
+{% block navbarleft %}
+	<ul class="nav navbar-nav">
+		<li class="active"><a href="/overview">Overview<span class="sr-only">(current)</span></a></li>
+	    <li><a href="/public?">Public Hotline </a></li>
+	    <li><a href="/hcreports">HC Worker Reports</a></li>
+	    <li><a href="/upload">Upload Data</a></li>
+	    <li><a href="/download">Download Report</a></li>
+	</ul>
+{% endblock %}
+
+{% block body %}
+	{% for chart, total, avg in figures %}
+		{{ chart | safe }}
+		<p> <b> Total: </b> {{ total }}</p>
+		<p> <b> Average (per day): </b> {{ avg}} </p>
+	{% endfor %}
+{% endblock %}
+
+

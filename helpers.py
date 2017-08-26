@@ -1,6 +1,8 @@
 import html
 import os
 import plotly
+import plotly.plotly as py
+import plotly.graph_objs as go
 
 
 def calls_by_type(hc_workers, public):
@@ -26,6 +28,16 @@ def calls_by_type(hc_workers, public):
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
+def calls_by_day_offline(dates, call_totals, thetitle, fname):
+    py.sign_in('emilylaiken', 'csrDX5SAFtnDVouV2f18') # Replace the username, and API key with your credentials.
+    trace = go.Scatter(x=dates, y= call_totals)
+    data = [trace]
+    layout = go.Layout(title=thetitle, width=800, height=640)
+    fig = go.Figure(data=data, layout=layout)
+    py.image.save_as(fig, filename=fname)
+    return 
+
+
 def calls_by_day(dates, call_totals, title):
     figure = {
         "data": [{
@@ -37,7 +49,7 @@ def calls_by_day(dates, call_totals, title):
             "showlegend": False
         }
     }
-    return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
+    return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False, image='jpeg', image_filename='test')
 
 def menu_visits_by_day(dates, h5n1, mers, zika):
     figure = {
@@ -53,6 +65,15 @@ def menu_visits_by_day(dates, h5n1, mers, zika):
         }
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
+
+def overview_and_prevention_by_day_download(dates, overview, prevention, title, fname):
+    py.sign_in('emilylaiken', 'csrDX5SAFtnDVouV2f18') # Replace the username, and API key with your credentials.
+    trace1 = go.Scatter(x=dates, y= overview, name='Overview information')
+    trace2 = go.Scatter(x=dates, y=prevention, name='Prevention information')
+    data = [trace1, trace2]
+    layout = go.Layout(title="Visits to Prevention/Overview Information by Day -" + title, width=800, height=640)
+    fig = go.Figure(data=data, layout=layout)
+    py.image.save_as(fig, filename=fname)
 
 def overview_and_prevention_by_day(dates, overview, prevention, title):
     figure = {

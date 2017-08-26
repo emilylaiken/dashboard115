@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+
+{% block navbarleft %}
+	<ul class="nav navbar-nav">
+		<li><a href="/overview?durationstart=0&durationend=end">Overview<span class="sr-only">(current)</span></a></li>
+	    <li><a href="/public?durationstart=0&durationend=end">Public Hotline</a></li>
+	    <li><a href="/hcreports">HC Worker Reports</a></li>
+	    <li class="active"><a href="/upload">Upload Data<span class="sr-only">(current)</span></a></li>
+	    <li><a href="/download">Download Report</a></li>
+	</ul>
+{% endblock %}
+
+{% block body %}
+	<p> To upload additional call logs to be displayed on the dashboard, use the below button to select the CSV file to be uploaded. </p>
+	<form enctype="multipart/form-data" method="post" action="/dataload">
+		<input type="file" name="log" id="log">
+		<br />
+  		<input type="submit"  class="btn btn-default">
+  	</form>
+{% endblock %}

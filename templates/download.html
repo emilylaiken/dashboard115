@@ -1,0 +1,29 @@
+{% extends "layout_datepicker.html" %}
+
+{% block subtext %}
+{{ name }}
+{% endblock %}
+
+{% block navbarleft %}
+	<ul class="nav navbar-nav">
+		<li><a href="/overview?durationstart=0&durationend=end">Overview<span class="sr-only">(current)</span></a></li>
+	    <li><a href="/public?durationstart=0&durationend=end">Public Hotline</a></li>
+	    <li><a href="/hcreports">HC Worker Reports</a></li>
+	    <li><a href="/upload">Upload Data</a></li>
+	    <li class="active"><a href="/download">Download Report</a><span class="sr-only">(current)</span></li>
+	</ul>
+{% endblock %}
+
+{% block body %}
+	<p> The report PDF includes three sections: a qualitative paragraph, statistics, and the graphs as displayed on this dashboard. Select the time period for the report using the filter at upper right. Then, input the qualitative description in the box below. Finally, click the "save & download" button to download the PDF report. </p>
+
+	<form method="post" action={{redirect_string}}>
+		<div class="form-group">
+			<label for="qualitative"> Qualitative description:</label>
+		    <input type="text" class="form-control" name="qualitative">
+		    <br />
+		    <button type="submit" class="btn btn-default" >Save & Download</button>
+		</div>	
+	</form>
+	
+{% endblock %}

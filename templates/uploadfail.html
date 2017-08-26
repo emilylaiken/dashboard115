@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block subtext %}
+{{ name }}
+{% endblock %}
+
+{% block navbarleft %}
+	<ul class="nav navbar-nav">
+		<li><a href="/overview?durationstart=0&durationend=end">Overview<span class="sr-only">(current)</span></a></li>
+	    <li><a href="/public?durationstart=0&durationend=end">Public Hotline</a></li>
+	    <li><a href="/hcreports">HC Worker Reports</a></li>
+	    <li class="active"><a href="/upload">Upload Data<span class="sr-only">(current)</span></a></li>
+	    <li><a href="/download">Download Report</a></li>
+	</ul>
+{% endblock %}
+
+{% block body %}
+	<p> Upload failed. Please make sure you chose a file that is in CSV format only. </p>
+{% endblock %}

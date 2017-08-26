@@ -1,0 +1,9 @@
+README.rst
+datedelta.py
+setup.cfg
+setup.py
+datedelta.egg-info/PKG-INFO
+datedelta.egg-info/SOURCES.txt
+datedelta.egg-info/dependency_links.txt
+datedelta.egg-info/pbr.json
+datedelta.egg-info/top_level.txt
