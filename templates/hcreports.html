@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "layout_datepicker.html" %}
 
 {% block navbarleft %}
 	<ul class="nav navbar-nav">
@@ -14,8 +14,7 @@
 {% endblock %}
 
 {% block body %}
-<!--{{ chart1 | safe }} -->
-{{ chart2 | safe }}
-{{ chart3 | safe }}
-{{ chart4 | safe }}
+	{{ chart2 | safe }}
+	{{ chart3 | safe }}
+	{{ chart4 | safe }}
 {% endblock %}

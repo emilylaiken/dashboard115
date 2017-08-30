@@ -52,6 +52,9 @@
           else if (url.includes('download')) {
             window.location.href = "/download?datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
           }
+          else if (url.includes('hcreports')) {
+            window.location.href = "/hcreports?datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
+          }
           else {
             window.location.href = "/public?durationstart=" + duration_start + "&durationend=" + duration_end + "&datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
           }
