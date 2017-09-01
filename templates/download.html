@@ -15,14 +15,17 @@
 {% endblock %}
 
 {% block body %}
-	<p> The report PDF includes three sections: a qualitative paragraph, statistics, and the graphs as displayed on this dashboard. Select the time period for the report using the filter at upper right. Then, input the qualitative description in the box below. Finally, click the "save & download" button to download the PDF report. </p>
+	<p> The report PDF includes three sections: a qualitative paragraph, statistics, and the graphs as displayed on this dashboard. Select the time period for the report using the filter at upper right. Then, input the qualitative description and your email in the box below. Upon clicking the "email me the report" button, the system will begin to process your PDF report. You will be notified by email when the report is ready, including a link through which you can access the report. </p>
 
 	<form method="post" action={{redirect_string}}>
 		<div class="form-group">
 			<label for="qualitative"> Qualitative description:</label>
 		    <input type="text" class="form-control" name="qualitative">
 		    <br />
-		    <button type="submit" class="btn btn-default" >Save & Download</button>
+		    <label for="email"> Email: </label>
+		    <input type="email" class="form-control" name="email">
+		    <br />
+		    <button type="submit" class="btn btn-default" >Email me the report</button>
 		</div>	
 	</form>
 	

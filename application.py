@@ -12,7 +12,14 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from pyPdf import PdfFileWriter, PdfFileReader
 from werkzeug import secure_filename
+from threading import Thread
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
+from email.MIMEBase import MIMEBase
+from email import encoders
+import smtplib
 import helpers
+
 
 #App configurations--set folders and allowed extensions for file uploads
 app = Flask(__name__)
@@ -36,7 +43,6 @@ def public_url():
 def index():
     if request.method=="POST":
         if request.form.get('username') != 'cdc' or request.form.get('password') != 'cdc':
-            print(request.form.get('username'), file=sys.stderr)
             return render_template('index.html')
         else:
             session['logged_in'] = True
@@ -128,8 +134,6 @@ def generateFiguresDownload(chart_sql, total_sql, avg_sql, title, filename):
     else:
         cur.execute(avg_sql)
         avgs = cur.fetchall()
-        for avg in avgs:
-            print (avg, file=sys.stderr)
         avg = int(round(avgs[0][0]))
     con.close()
     return (total, avg)
@@ -365,38 +369,17 @@ def makePdf(pdfFileName, listPages, dir = ''):
 
     pdf.output(dir + pdfFileName + ".pdf", "F")
 
-@app.route("/download")
-def download():
-    if not session.get('logged_in'):
-        return redirect(url_for('index'))
-    if request.args.get('datestart') == None or request.args.get('dateend') == None:
-        now_date = datetime.datetime.now()
-        now_string = now_date.strftime("%Y-%m-%d")
-        month_ago = now_date - datetime.timedelta(days = 30)
-        monthago_string = month_ago.strftime("%Y-%m-%d")
-        return redirect('/download?datestart=' + monthago_string + '&dateend=' + now_string)
-    # Parse dates from URL parameters
-    starting_date_string = request.args.get('datestart')
-    ending_date_string = request.args.get('dateend')
-    return render_template("download.html", redirect_string = "/downloaded?datestart=" + starting_date_string + "&dateend=" + ending_date_string)
-
-@app.route("/downloaded", methods=["GET", "POST"])
-def downloaded():
-    if not session.get('logged_in'):
-        return redirect(url_for('index'))
+def genReport(starting_date_string, ending_date_string, qualitative, to_email, target_url):
     # Clean up working directory
     for f in os.listdir(os.getcwd()):
-        if f.endswith(".pdf") or f.endswith(".png"):
+        if f.endswith(".png"):
             os.remove(f)
     # File title includes current timestamp for unique identification
     now = datetime.datetime.now()
     filetitle = "report" + now.strftime("%d-%m-%y-%H-%M-%S") + ".pdf"
-    # Parse starting and ending date from URL parameters
-    starting_date_string = request.args.get('datestart')
-    ending_date_string = request.args.get('dateend')
+    print('writing qualitative', file=sys.stderr)
     #First page of report: title
     c = canvas.Canvas("hello.pdf", pagesize=letter)
-    qualitative = request.form['qualitative']
     width, height = letter
     c.setFont('Helvetica', 26)
     c.drawCentredString(width / 2.0, height / 2.0, '115 Hotline Report: ' + starting_date_string + " to " + ending_date_string)
@@ -412,11 +395,12 @@ def downloaded():
     c.drawCentredString(width / 2.0, height - inch, 'Statistics')
     c.setFont('Helvetica', 12)
     inchctr = 0.0
-    duration_string, title_addon = parseDuration('0', 'end')
     # Calls by day entire hotline PNG and statistics
+    print('making sql queries and generating pngs', file=sys.stderr)
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
     condition_string = "call_id != ''"
+    duration_string, title_addon = parseDuration('0', 'end')
     chart_sql, total_sql, avg_sql = generateSQL("all", starting_date_string, ending_date_string, duration_string, condition_string)
     total, avg = generateFiguresDownload(chart_sql, total_sql, avg_sql, "Calls to Entire Hotline By Day" + title_addon, "overview.png")
     c.drawString(inch, height - inch*2.0 - inch*inchctr, "Total calls to entire hotline: " + str(total))
@@ -488,15 +472,76 @@ def downloaded():
     inchctr = inchctr + 0.5
     c.drawString(inch, height - inch*2.0 - inch*inchctr, "Average calls to public hotline (by day): " + str(avg))
     con.close()
+    print('creating graphs pdf', file=sys.stderr)
     # Make PDF of all graphs
     makePdf("graphs", ["overview.png", "public.png", "h5n1.png", "mers.png", "zika.png", "publicreports.png", "moreinfo.png", "ambulance.png"])
     c.save()
     # Combine PDF with text (title page, qualitative, statistics) and PDF with graphs
+    print('combining all pdfs', file=sys.stderr)
     output = PdfFileWriter()
     append_pdf(PdfFileReader(open("hello.pdf","rb")),output)
     append_pdf(PdfFileReader(open("graphs.pdf","rb")),output)
     output.write(open(filetitle,"wb"))
+    print('sending email', file=sys.stderr)
+    # Send email to client
+    #server = smtplib.SMTP('smtp.gmail.com', 587)
+    #server.starttls()
+    #server.login("emily.aiken@instedd.org", "dolphin1997")
+    #msg = "Your PDF report is ready here"
+    #server.sendmail("emily.aiken@instedd.org", to_email, msg)
+    #server.quit()
+
+    fromaddr = "emily.aiken@instedd.org"
+    toaddr = to_email
+    msg = MIMEMultipart()
+    msg['From'] = fromaddr
+    msg['To'] = toaddr
+    msg['Subject'] = "Your 115 Hotline Report"
+    body = "The PDF report you requested is attached to this email."
+    msg.attach(MIMEText(body, 'plain'))
+    attachment = open(filetitle, "rb")
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload((attachment).read())
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', "attachment; filename= %s" % filetitle) 
+    msg.attach(part)
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(fromaddr, "dolphin1997")
+    text = msg.as_string()
+    server.sendmail(fromaddr, toaddr, text)
+    server.quit()
+
+
+
+@app.route("/download")
+def download():
+    if not session.get('logged_in'):
+        return redirect(url_for('index'))
+    if request.args.get('datestart') == None or request.args.get('dateend') == None:
+        now_date = datetime.datetime.now()
+        now_string = now_date.strftime("%Y-%m-%d")
+        month_ago = now_date - datetime.timedelta(days = 30)
+        monthago_string = month_ago.strftime("%Y-%m-%d")
+        return redirect('/download?datestart=' + monthago_string + '&dateend=' + now_string)
+    # Parse dates from URL parameters
+    starting_date_string = request.args.get('datestart')
+    ending_date_string = request.args.get('dateend')
+    return render_template("download.html", redirect_string = "/downloading?datestart=" + starting_date_string + "&dateend=" + ending_date_string)
+
+@app.route("/downloading", methods=["GET", "POST"])
+def downloading():
+    if not session.get('logged_in'):
+        return redirect(url_for('index'))
+    th = Thread(target=genReport, args=(request.args.get('datestart'), request.args.get('dateend'), request.form['qualitative'], request.form['email'], url_for('downloaded')))
+    th.start()
+    return render_template("downloading.html")
+
+@app.route("/downloaded", methods=["GET"])
+def downloaded():
+    filetitle = request.args.get('filename') + ".pdf"
     return send_file(filetitle, attachment_filename=filetitle, as_attachment=True)
+    
 
 ########## CSV UPLOAD ###########    
 # Checks if the uploaded file is a CSV
@@ -546,7 +591,7 @@ def loadData(data_file_name):
         week_id = ""
         day_counter = 7
         for call in dr:
-            print("reading call " + call['ID'], file=sys.stderr)
+            #print("reading call " + call['ID'], file=sys.stderr)
             # Record general info--call ID, date, time, caller ID, status, level of worker, and cdc report confirmations
             if call['ID'] == "": # If we are passed the end of the call records, stop
                 break
@@ -556,11 +601,9 @@ def loadData(data_file_name):
                 dateTime = parseDateTime(call['Started'])
                 date = dateTime[0]
                 time = dateTime[1]
-                if not prev_date == date:
-                    day_counter = day_counter + 1
-                if (day_counter == 8):
+                day_of_week = datetime.datetime.strptime(date, '%Y-%m-%d').weekday()
+                if not prev_date == date and day_of_week == 2:
                     week_id = "Week of " + date
-                    day_counter = 1
                 prev_date = date
                 caller_interaction = call['Caller interaction']
                 call_type = 'public'
