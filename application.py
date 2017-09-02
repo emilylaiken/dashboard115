@@ -24,7 +24,6 @@ import helpers
 #App configurations--set folders and allowed extensions for file uploads
 app = Flask(__name__)
 
-
 # Helper functions used in all pages for dynamically generating URLs for Overview and Public pages
 def overview_url():
     url = '/overview'
@@ -39,16 +38,61 @@ def public_url():
     return url
     
 ############ LOGIN PAGE ###########
+
+def getCorrectLogin():
+    con = sqlite3.connect("logs115.db")
+    cur = con.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS login(username varchar primary key, pwd varchar)")
+    cur.execute("SELECT COUNT(*) FROM login")
+    result = cur.fetchall()
+    numaccounts = result[0][0]
+    if numaccounts == 0:
+        print("here", file=sys.stderr)
+        cur.executemany("INSERT INTO login (username, pwd) VALUES (?, ?);", [('cdc', 'cdc')])
+    cur.execute("SELECT username FROM login LIMIT 1")
+    usernames = cur.fetchall()
+    username = usernames[0][0]
+    cur.execute("SELECT pwd FROM login LIMIT 1")
+    pwds = cur.fetchall()
+    pwd = pwds[0][0]
+    con.commit()
+    con.close()
+    return username, pwd
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method=="POST":
-        if request.form.get('username') != 'cdc' or request.form.get('password') != 'cdc':
+        # Extract correct username and password--if none have been set, default is "cdc" and "cdc"
+        username, pwd = getCorrectLogin()
+        if request.form.get('username') == None or request.form.get('password') == None:
             return render_template('index.html')
+        if request.form.get('username') != username or request.form.get('password') != pwd:
+            return render_template('wronglogin.html')
         else:
             session['logged_in'] = True
             return redirect('/overview')
     else:
         return render_template('index.html')
+
+@app.route("/changelogin", methods=["GET", "POST"])
+def changelogin():
+    if request.method=="POST":
+        username, pwd = getCorrectLogin()
+        if request.form.get('oldusername') == None or request.form.get('oldpwd') == None or request.form.get('newusername') == None or request.form.get('newpwd') == None:
+            return render_template('changelogin.html')
+        elif request.form.get('oldusername') != username or request.form.get('oldpwd') != pwd:
+            return render_template('wronglogin.html')
+        else:
+            con = sqlite3.connect("logs115.db")
+            cur = con.cursor()
+            cur.execute("DELETE FROM login")
+            cur.executemany("INSERT INTO login (username, pwd) VALUES (?, ?);", [(request.form.get('newusername'), request.form.get('newpwd'))])
+            con.commit()
+            con.close()
+            return redirect('/')
+    else:
+        return render_template('changelogin.html')
+
 
 ########## DASHBOARD PAGES: OVERVIEW, PUBLIC, AND HC REPORTS ##########
 # Get the specified column of a table (used to get specific series for graphs)
