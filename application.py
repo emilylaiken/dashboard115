@@ -7,9 +7,15 @@ from flask import Flask, redirect, render_template, request, url_for, send_file,
 import sys
 from fpdf import FPDF
 from PIL import Image
+import reportlab
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.pdfbase import pdfmetrics  
+from reportlab.pdfbase.ttfonts import TTFont   
 from pyPdf import PdfFileWriter, PdfFileReader
 from werkzeug import secure_filename
 from threading import Thread
@@ -422,23 +428,46 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
     now = datetime.datetime.now()
     filetitle = "report" + now.strftime("%d-%m-%y-%H-%M-%S") + ".pdf"
     print('writing qualitative', file=sys.stderr)
-    #First page of report: title
-    c = canvas.Canvas("hello.pdf", pagesize=letter)
-    width, height = letter
-    c.setFont('Helvetica', 26)
-    c.drawCentredString(width / 2.0, height / 2.0, '115 Hotline Report: ' + starting_date_string + " to " + ending_date_string)
-    c.showPage()
-    #Second page of report: Qualitative description (pulled from POST request)
-    c.setFont('Helvetica', 25)
-    c.drawCentredString(width / 2.0, height - inch, 'Qualitative Description')
-    c.setFont('Helvetica', 12)
-    c.drawString(inch, height - inch*2.0, qualitative)
-    c.showPage()
+    #Set up PDF document and styles
+    doc = SimpleDocTemplate("hello.pdf", pagesize=letter)
+    parts = []
+    folder = os.path.dirname(reportlab.__file__) + os.sep + 'fonts'   
+    ttfFile = os.path.join(folder, 'Vera.ttf')   
+    pdfmetrics.registerFont(TTFont("Vera", ttfFile))
+    styles= {
+        'paragraph': ParagraphStyle(
+            'paragraph',
+            fontName='Vera',
+            fontSize=10,
+            alignment=TA_LEFT
+        ),
+        'title': ParagraphStyle(
+            'title',
+            fontName='Vera',
+            fontSize=20,
+            alignment=TA_CENTER
+        ),
+        'report_title': ParagraphStyle(
+            'report_title',
+            fontName='Vera',
+            fontSize=30,
+            alignment=TA_CENTER
+        ),
+    }
+    #Title Page
+    parts.append(Spacer(1, 3*inch))
+    parts.append(Paragraph("115 Hotline Report", styles['report_title']))
+    parts.append(Spacer(1, 0.7*inch))
+    parts.append(Paragraph(starting_date_string + " to " + ending_date_string, styles['report_title']))
+    parts.append(PageBreak())
+    #Qualitative description page
+    parts.append(Paragraph("Qualitative Description", styles['title']))
+    parts.append(Spacer(1, inch))
+    parts.append(Paragraph(qualitative, styles['paragraph']))
+    parts.append(PageBreak())
+    parts.append(Paragraph("Summary Statistics", styles['title']))
+    parts.append(Spacer(1, inch))
     #Rest of report: statistics and graphs
-    c.setFont('Helvetica', 25)
-    c.drawCentredString(width / 2.0, height - inch, 'Statistics')
-    c.setFont('Helvetica', 12)
-    inchctr = 0.0
     # Calls by day entire hotline PNG and statistics
     print('making sql queries and generating pngs', file=sys.stderr)
     con = sqlite3.connect("logs115.db")
@@ -447,18 +476,18 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
     duration_string, title_addon = parseDuration('0', 'end')
     chart_sql, total_sql, avg_sql = generateSQL("all", starting_date_string, ending_date_string, duration_string, condition_string)
     total, avg = generateFiguresDownload(chart_sql, total_sql, avg_sql, "Calls to Entire Hotline By Day" + title_addon, "overview.png")
-    c.drawString(inch, height - inch*2.0 - inch*inchctr, "Total calls to entire hotline: " + str(total))
-    inchctr = inchctr + 0.5
-    c.drawString(inch, height - inch*2.0 - inch*inchctr, "Average calls to entire hotline (by day): " + str(avg))
-    inchctr = inchctr + 0.5
+    parts.append(Paragraph("Total calls to entire hotline: " + str(total), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
+    parts.append(Paragraph("Average calls to entire hotline (by day): " + str(avg), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
     # Calls by day public hotline PNG and statistics
     condition_string = " type='public' "
     chart_sql, total_sql, avg_sql = generateSQL("all", starting_date_string, ending_date_string, duration_string, condition_string)
     total, avg = generateFiguresDownload(chart_sql, total_sql, avg_sql, "Calls to Public Hotline By Day" + title_addon, "public.png")
-    c.drawString(inch, height - inch*2.0-inch*inchctr, "Total calls to public hotline: " + str(total))
-    inchctr = inchctr + 0.5
-    c.drawString(inch, height - inch*2.0 - inch*inchctr, "Average calls to public hotline (by day): " + str(avg))
-    inchctr = inchctr + 0.5
+    parts.append(Paragraph("Total calls to public hotline: " + str(total), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
+    parts.append(Paragraph("Average calls to public hotline (by day): " + str(avg), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
     # Calls to each disease menu by day PNGs and statistics
     public_diseases = ["h5n1", "mers", "zika"]
     for disease in public_diseases:
@@ -480,9 +509,8 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
         total_sql = "SELECT count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " AND(" + menu_string + "=1 OR " + menu_string + "=2)"
         cur.execute(total_sql)
         total = cur.fetchall()
-        c.drawString(inch, height - inch*2.0-inch*inchctr, "Total calls to " + disease + " menu (overview or prevention): " + str(total[0][0]))
-        inchctr = inchctr + 0.5
-        #Average visits to menu
+        parts.append(Paragraph("Total calls to " + disease + " menu (overview or prevention): " + str(total[0][0]), styles['paragraph']))
+        parts.append(Spacer(1, 0.3*inch))
         days_sql = "SELECT count(DISTINCT date) FROM calls WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'"
         cur.execute(days_sql)
         num_days = cur.fetchall()
@@ -490,36 +518,36 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
             avg = 0
         else:
             avg = total[0][0]/num_days[0][0]
-        c.drawString(inch, height - inch*2.0-inch*inchctr, "Average calls to " + disease + " menu (overview or prevention): " + str(avg))
-        inchctr = inchctr + 0.5
+        parts.append(Paragraph("Average calls to " + disease + " menu (overview or prevention): " + str(avg), styles['paragraph']))
+        parts.append(Spacer(1, 0.3*inch))
     # Public reports by day PNG and statistics
     condition_string = "public_report_confirmation='0'"
     chart_sql, total_sql, avg_sql = generateSQL("public", starting_date_string, ending_date_string, duration_string, condition_string)
     total, avg = generateFiguresDownload(chart_sql,total_sql, avg_sql, "Public Disease Reports by Day" + title_addon, "publicreports.png")
-    c.drawString(inch, height - inch*2.0-inch*inchctr, "Total public reports: " + str(total))
-    inchctr = inchctr + 0.5
-    c.drawString(inch, height - inch*2.0 - inch*inchctr, "Average public reports (by day): " + str(avg))
-    inchctr = inchctr + 0.5
+    parts.append(Paragraph("Total public reports: " + str(total), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
+    parts.append(Paragraph("Average public reports (by day): " + str(avg), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
     # More info by day PNG and statistics
     condition_string = "hotline_menu='3'"
     chart_sql, total_sql, avg_sql = generateSQL("public", starting_date_string, ending_date_string, duration_string, condition_string)
     total, avg = generateFiguresDownload(chart_sql, total_sql, avg_sql, "Calls Requesting Additional Information by Day" + title_addon, "moreinfo.png")
-    c.drawString(inch, height - inch*2.0-inch*inchctr, "Total calls requesting more information: " + str(total))
-    inchctr = inchctr + 0.5
-    c.drawString(inch, height - inch*2.0 - inch*inchctr, "Average calls requesting more information (by day): " + str(avg))
-    inchctr = inchctr + 0.5
+    parts.append(Paragraph("Total calls requesting more information: " + str(total), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
+    parts.append(Paragraph("Average calls requesting more information (by day): " + str(avg), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
     # Ambulance info by day PNG and statistics
     condition_string = "hotline_menu='4'"
     chart_sql, total_sql, avg_sql = generateSQL("public", starting_date_string, ending_date_string, duration_string, condition_string)
     total, avg = generateFiguresDownload(chart_sql, total_sql, avg_sql, "Calls Requesting Ambulance Information by Day" + title_addon, "ambulance.png")
-    c.drawString(inch, height - inch*2.0-inch*inchctr, "Total calls to public hotline: " + str(total))
-    inchctr = inchctr + 0.5
-    c.drawString(inch, height - inch*2.0 - inch*inchctr, "Average calls to public hotline (by day): " + str(avg))
+    parts.append(Paragraph("Total calls to public hotline: " + str(total), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
+    parts.append(Paragraph("Average calls to public hotline (by day): " + str(avg), styles['paragraph']))
     con.close()
     print('creating graphs pdf', file=sys.stderr)
     # Make PDF of all graphs
     makePdf("graphs", ["overview.png", "public.png", "h5n1.png", "mers.png", "zika.png", "publicreports.png", "moreinfo.png", "ambulance.png"])
-    c.save()
+    doc.build(parts)
     # Combine PDF with text (title page, qualitative, statistics) and PDF with graphs
     print('combining all pdfs', file=sys.stderr)
     output = PdfFileWriter()
