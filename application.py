@@ -685,11 +685,17 @@ def loadData(data_file_name):
     con.commit()
     con.close()
 
-@app.route("/upload")
+@app.route("/upload", methods=["GET", "POST"])
 def upload():
     if not session.get('logged_in'):
         return redirect(url_for('index'))
-    return render_template("upload.html")
+    if request.args.get('step') == None or request.args.get('step') == '1':
+        return render_template("upload1.html")
+    elif request.args.get('step') == '2':
+        return render_template("upload2.html")
+    else:
+        return render_template("upload3.html")
+
 
 @app.route("/dataload", methods=["GET", "POST"])
 def dataload():
