@@ -45,7 +45,49 @@
     <br />
     <br />
 
-	<p> Guidelines here for call log. </p>
+	<p> The next step is to ensure that the call log is in the proper format for upload. While the copy originally downloaded from Verboice ought to suffice, it is worth the time to ensure that the following columns are included in the log. While the columns need not appear in the same order they are in below, they must have the same spelling and capitalization (note certain typos: "va_neonatal_case"). A template of an uploadable CSV file can be downloaded <a href="/upload?step=template"> here</a>.</p>
+    <b> General hotline-related columns </b>
+    <ul>
+        <li> ID </li>
+        <li> Started </li>
+        <li> Caller Interaction </li>
+        <li> Duration(second) </li>
+        <li> Caller ID </li>
+        <li> Status </li>
+    </ul>
+    <b> Public hotline-related columns </b>
+    <ul>
+        <li> hotline_menu </li>
+        <li> disease_menu </li>
+        <li> h5n1_menu </li>
+        <li> h5n1_overview_menu </li>
+        <li> h5n1_prevention_menu </li>
+        <li> mers_menu </li>
+        <li> mers_overview_menu </li>
+        <li> mers_prevention_menu </li>
+        <li> zika_menu </li>
+        <li> zika_overview_menu </li>
+        <li> public_report_confirmation </li>
+    </ul>
+    <b> HC report-related columns </b>
+    <ul>
+        <li> cdc_report_started </li>
+        <li> cdc_report_ended </li>
+        <li> disease_type </li>
+        <li> var_dairrhea_case </li>
+        <li> var_dairrhea_death </li>
+        <li> var_fever_case </li>
+        <li> var_fever_death </li>
+        <li> var_flaccid_case </li>
+        <li> var_flaccid_death </li>
+        <li> var_diphteria_case </li>
+        <li> var_diphteria_death </li>
+        <li> var_rabies_case </li>
+        <li> var_rabies_death </li>
+        <li> va_neonatal_case </li>
+        <li> var_neonatal_death </li>
+    </ul>
+
     <form enctype="multipart/form-data" method="post" action="/upload?step=3">
         <button type="submit" class="btn btn-default">Next</button>
     </form>

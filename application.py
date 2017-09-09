@@ -693,6 +693,8 @@ def upload():
         return render_template("upload1.html")
     elif request.args.get('step') == '2':
         return render_template("upload2.html")
+    elif request.args.get('step') == 'template':
+        return send_file('call_logs_template.csv', as_attachment = True)
     else:
         return render_template("upload3.html")
 
