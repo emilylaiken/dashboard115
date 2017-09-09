@@ -71,7 +71,7 @@ def overview_and_prevention_by_day_download(dates, overview, prevention, title, 
     trace1 = go.Scatter(x=dates, y= overview, name='Overview information')
     trace2 = go.Scatter(x=dates, y=prevention, name='Prevention information')
     data = [trace1, trace2]
-    layout = go.Layout(title="Visits to Prevention/Overview Information by Day -" + title, width=800, height=640)
+    layout = go.Layout(title="Visits to Prevention/Overview Information by Day - " + title, width=800, height=640)
     fig = go.Figure(data=data, layout=layout)
     py.image.save_as(fig, filename=fname)
 

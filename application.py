@@ -258,7 +258,7 @@ def public():
         dates = column(overview_visits, 0)
         overview = column(overview_visits, 1)
         prevention = column(prevention_visits, 1)
-        disease_chart = helpers.overview_and_prevention_by_day(dates, overview, prevention, disease + title_addon)
+        disease_chart = helpers.overview_and_prevention_by_day(dates, overview, prevention, str.title(disease) + title_addon)
         charts.append(disease_chart)
         #Total visits to menu
         total_sql = "SELECT count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " AND(" + menu_string + "=1 OR " + menu_string + "=2)"
@@ -476,7 +476,7 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
         dates = column(overview_visits, 0)
         overview = column(overview_visits, 1)
         prevention = column(prevention_visits, 1)
-        disease_chart = helpers.overview_and_prevention_by_day_download(dates, overview, prevention, disease + title_addon, disease + ".png")
+        disease_chart = helpers.overview_and_prevention_by_day_download(dates, overview, prevention, str.title(disease) + title_addon, disease + ".png")
         total_sql = "SELECT count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " AND(" + menu_string + "=1 OR " + menu_string + "=2)"
         cur.execute(total_sql)
         total = cur.fetchall()
@@ -527,14 +527,6 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
     append_pdf(PdfFileReader(open("graphs.pdf","rb")),output)
     output.write(open(filetitle,"wb"))
     print('sending email', file=sys.stderr)
-    # Send email to client
-    #server = smtplib.SMTP('smtp.gmail.com', 587)
-    #server.starttls()
-    #server.login("emily.aiken@instedd.org", "dolphin1997")
-    #msg = "Your PDF report is ready here"
-    #server.sendmail("emily.aiken@instedd.org", to_email, msg)
-    #server.quit()
-
     fromaddr = "emily.aiken@instedd.org"
     toaddr = to_email
     msg = MIMEMultipart()
