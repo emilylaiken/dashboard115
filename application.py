@@ -25,6 +25,11 @@ from email.MIMEBase import MIMEBase
 from email import encoders
 import smtplib
 import helpers
+import html
+import plotly
+import plotly.plotly as py
+import plotly.graph_objs as go
+import numpy as np
 
 
 #App configurations--set folders and allowed extensions for file uploads
@@ -397,6 +402,95 @@ def hcreports():
     chart4 = helpers.case_reports_by_week(dates, diarrhea, fever, flaccid, respiratory, dengue, meningitis, jaundice, diphteria, rabies, neonatal, "Reports of Disease Deaths by Week")
     con.close()
     return render_template("hcreports.html", chart2=chart2, chart3=chart3, chart4=chart4)
+
+@app.route("/explore", methods=["GET", "POST"])
+def explore():
+    # Check for log in
+    if not session.get('logged_in'):
+        return redirect(url_for('index'))
+
+    # Parse dates from URL parameters
+    starting_date_string = '2015-09-03'
+    ending_date_string = '2017-08-29'
+
+    con = sqlite3.connect("logs115.db")
+    cur = con.cursor()
+    #Generate first chart: attempted & completed HC reports by week
+    cur.execute('SELECT diarrhea_cases FROM hc_reports WHERE diarrhea_cases > 100')
+    raws = cur.fetchall()
+    cases = [raw[0] for raw in raws]
+    figure1 = {
+        "data": [
+            {
+                "type": "histogram",
+                "x": cases,
+                "xbins": {
+                    "start": 100,
+                    "end": 1000,
+                    "size": 100
+                },
+                "marker": {
+                    "color": '#ED7D31'
+                } 
+            }
+        ],
+        "layout": {
+            "title": "Histogram of Diarrhea Cases in Disease Reports (Reports with >100 Cases)",
+            "showlegend": False
+        }
+    }
+    plot1 = plotly.offline.plot(figure1, output_type="div", show_link=False, link_text=False)
+    cur.execute('SELECT duration FROM calls')
+    raws = cur.fetchall()
+    data = [raw[0] for raw in raws]
+    figure2 = {
+        "data": [
+            {
+                "type": "histogram",
+                "x": data,
+                "xbins": {
+                    "start": 0,
+                    "end": 300,
+                    "size": 10
+                },
+                "marker": {
+                    "color": '#659A41'
+                },  
+            }
+        ],
+        "layout": {
+            "title": "Histogram of Call Times (Only Calls Under 300 Seconds)",
+            "showlegend": False,
+        }
+    }
+    plot2 = plotly.offline.plot(figure2, output_type="div", show_link=False, link_text=False)
+    cur.execute('SELECT status, COUNT(*) as count FROM calls WHERE duration > 10 GROUP BY status')
+    raws = cur.fetchall()
+    lables = [raw[0] for raw in raws]
+    data = [raw[1] for raw in raws]
+    figure3 = {
+        "data": [
+            {
+                "labels": lables,
+                "hoverinfo": "none",
+                #"marker": {
+                 #   "colors": [
+                  #      "rgb(0,255,00)",
+                   #     "rgb(255,0,0)",
+                    #]
+                #},
+                "type": "pie",
+                "values": data
+            }
+        ],
+        "layout": {
+            "title": "Calls by Status",
+            "showlegend": True
+            }
+    }
+    plot3 = plotly.offline.plot(figure3, output_type="div", show_link=False, link_text=False)
+    con.close()
+    return render_template("explore.html", plot1 = plot1, plot2 = plot2, plot3 = plot3)
 
 ########## DOWNLOADABLE REPORTS ##########
 # Append PDFs (input files) to a PDF file writer (output)
