@@ -1,4 +1,7 @@
 alabaster==0.7.10
+anaconda-client==1.6.5
+anaconda-navigator==1.6.8
+anaconda-project==0.8.0
 appnope==0.1.0
 appscript==1.0.1
 asn1crypto==0.22.0
@@ -9,10 +12,10 @@ backports.shutil-get-terminal-size==1.0.0
 beautifulsoup4==4.6.0
 bitarray==0.8.1
 bkcharts==0.2
+blaze==0.11.3
 bleach==2.0.0
 bokeh==0.12.7
 boto==2.48.0
-Bottleneck==1.2.1
 certifi==2017.7.27.1
 cffi==1.10.0
 chardet==3.0.4
