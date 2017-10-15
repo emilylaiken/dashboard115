@@ -75,9 +75,9 @@ def index():
     if request.method=="POST":
         # Extract correct username and password--if none have been set, default is "cdc" and "cdc"
         username, pwd = getCorrectLogin()
-        if request.form.get('username') == None or request.form.get('password') == None:
+        if request.form.get('username') == None or request.form.get('pwd') == None:
             return render_template('index.html')
-        if request.form.get('username') != username or request.form.get('password') != pwd:
+        if request.form.get('username') != username or request.form.get('pwd') != pwd:
             return render_template('wronglogin.html')
         else:
             session['logged_in'] = True

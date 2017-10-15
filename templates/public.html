@@ -6,9 +6,9 @@
 
 {% block navbarleft %}
 	<ul class="nav navbar-nav">
-		<li><a href="/overview">Overview<span class="sr-only">(current)</span></a></li>
-	    <li class="active"><a href="/public">Public Hotline <span class="sr-only">(current)</span></a></li>
-	    <li><a href="/hcreports">HC Worker Reports</a></li>
+		<li ><a href="/overview" id='overviewlink'>Overview<span class="sr-only">(current)</span></a></li>
+	    <li class="active"><a href="/public" id='publiclink'>Public Hotline <span class="sr-only">(current)</span></a></li>
+	    <li><a href="/hcreports" id='hcreportslink'>HC Worker Reports</a></li>
 	    <li><a href="/upload">Upload Data</a></li>
 	    <li><a href="/download">Download Report</a></li>
 	</ul>
@@ -21,3 +21,4 @@
 		<p> <b> Average (per day): </b> {{ avg}} </p>
 	{% endfor %}
 {% endblock %}
+

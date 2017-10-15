@@ -30,8 +30,15 @@
                     }
                     return false;
                 };
+                function getOverviewPublicUrl(base) {
+                    return base + 'datestart=' + getUrlParameter('datestart') + '&dateend=' + getUrlParameter('dateend') + "&durationstart=" + getUrlParameter('durationstart') + "&durationend=" + getUrlParameter('durationend');
+                };
+                function getHcUrl() {
+                    return '/hcreports?' + 'datestart=' + getUrlParameter('datestart') + '&dateend=' + getUrlParameter('dateend');
+                };
 
                 window.onload = function() {
+                    // Set up druation filter text
                     if (getUrlParameter('durationstart') == true || getUrlParameter('durationstart') == true) {
                         document.getElementById("dfilter").innerHTML = 'Duration: All <span class="caret"></span>';
                     }
@@ -47,6 +54,10 @@
                     else {
                         document.getElementById("dfilter").innerHTML = 'Duration: All <span class="caret"></span>';
                     }
+                    // Set up nav bar links
+                    document.getElementById('overviewlink').href = getOverviewPublicUrl('/overview?')
+                    document.getElementById('publiclink').href = getOverviewPublicUrl('/public?')
+                    document.getElementById('hcreportslink').href = getHcUrl()
                     return false;
                 };
 
