@@ -1,27 +1,4 @@
-
-{% extends "layout_datepicker.html" %}
-
-<html>
-<body>
-{% block durationfilter %}
-    <!-- Javascript for duration filter -->
-    <!--<script type="text/javascript" src={{ url_for('static', filename="js/helpers.js")}}></script> --> 
-    <!-- HTML for duration filter --> 
-    <li class="dropdown">
-        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" id="dfilter">Filter Duration <span class="caret"></span></a>
-        <ul class="dropdown-menu" >
-            <!-- Three pre-selected duration ranges: 0-5 minutes, 5-10 minutes, and 10+ minutes, as well as all calls -->
-            <li><a onclick="getUrl(0, 5)" href="#">0 - 5 minutes</a></li>
-            <li><a onclick="getUrl(5, 10)" href="#">5 - 10 minutes</a></li>
-            <li><a onclick="getUrl(10, 'end')" href="#">10+ minutes</a></li>
-            <li role="separator" class="divider"></li>
-            <li><a onclick="getUrl(0, 'end')" href="#">All</a></li>
-        </ul>
-    </li>
-
-    <script type="text/javascript">
-
-    // Function to get values of key-value pairs in URL 
+// Function to get values of key-value pairs in URL 
         var getUrlParameter = function getUrlParameter(sParam) {
             var sPageURL = decodeURIComponent(window.location.search.substring(1)), sURLVariables = sPageURL.split('&'), sParameterName, i;
             for (i = 0; i < sURLVariables.length; i++) {
@@ -65,7 +42,7 @@
         };
 
         window.onload = function() {
-            // MOVE THIS BACK TO LAYOUT_DURATIONFILTER
+        	// MOVE THIS BACK TO LAYOUT_DURATIONFILTER
             // Set up druation filter text
             if (getUrlParameter('durationstart') == true || getUrlParameter('durationstart') == true) {
                 document.getElementById("dfilter").innerHTML = 'Duration: All <span class="caret"></span>';
@@ -90,14 +67,3 @@
             document.getElementById('hcreportslink').href = getHcUrl()
             return false;
          };
-         </script>
-
-
-
-{% endblock %}
-
-</body>
-</html>
-
-
-

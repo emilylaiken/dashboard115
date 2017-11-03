@@ -1,38 +1,45 @@
 <!DOCTYPE html>
 <html dir="ltr" lang="en-US">
-  <head>
-    <meta charset="UTF-8" />
-    <title>115 Analytics Dashboard</title>
-    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" media="all" href="/static/daterangepicker.css" />
-    {% block extralinks %}{% endblock %}
-  </head>
 
-  <body style="margin: 60px 0">
-    <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
-    <script type="text/javascript" src="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
-    <script type="text/javascript" src={{ url_for('static', filename="js/moment.js")}}></script>
-    <script type="text/javascript" src={{ url_for('static', filename="js/daterangepicker.js")}}></script>
-    <div class="container">
-      <div class="page-header">
-        <h1>
-          115 Analytics Dashboard
-        </h1>
-        <nav class="navbar navbar-default">
-          <div class="container-fluid">
-            <div id="navbar" class="navbar-collapse collapse">
-              <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-                {% block navbarleft %}{% endblock %}
-                <ul class="nav navbar-nav navbar-right">
-                  {% block durationfilter %}{% endblock %}
-                  {% block datepicker %}{% endblock %}
-                </ul>
-              </div>
+    <head>
+        <meta charset="UTF-8" />
+        <title>115 Analytics Dashboard</title>
+        <!-- Link in stylesheets: bootstrap and local --> 
+        <link href="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" media="all" href="/static/daterangepicker.css" />
+        <!-- WHAT DO THESE DO?? --> 
+        {% block extralinks %}{% endblock %} 
+    </head>
+
+    <body style="margin: 60px 0">
+        <!-- Link in Javascript files: Jquery and bootstrap (online), two local datepicker scripts --> 
+        <script type="text/javascript" src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+        <script type="text/javascript" src="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src={{ url_for('static', filename="js/moment.js")}}></script>
+        <script type="text/javascript" src={{ url_for('static', filename="js/daterangepicker.js")}}></script>
+        <div class="container">
+            <div class="page-header">
+                <h1> 115 Analytics Dashboard </h1>
+                <nav class="navbar navbar-default">
+                    <div class="container-fluid">
+                        <div id="navbar" class="navbar-collapse collapse">
+                            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                                <!-- Left part of navbar: links to pages in dashboard --> 
+                                {% block navbarleft %}{% endblock %}
+                                <ul class="nav navbar-nav navbar-right">
+                                    <!-- Right part of navbar: duration and date filters --> 
+                                    {% block durationfilter %}{% endblock %}
+                                    {% block datepicker %}{% endblock %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
             </div>
-          </div>
-        </nav>
-      </div>
-      {% block body %}{% endblock %}
-    </div>
+            <!-- Actual content of page --> 
+            {% block body %}{% endblock %}
+        </div>
   </body>
+
 </html>
+

@@ -1,80 +1,89 @@
 {% extends "layout.html" %}
-
 {% block datepicker %}
-  <li>
-    <div id="reportrange" class="pull-right" style="background: #fff; cursor: pointer; padding: 14px 14px; border: 1px solid #ccc; width: 100%">
-      <i class="glyphicon glyphicon-calendar fa fa-calendar"></i>&nbsp;
-      <span></span> <b class="caret"></b>
-    </div>
+    <!-- HTML for datepicker --> 
+    <li>
+        <div id="reportrange" class="pull-right" style="background: #fff; cursor: pointer; padding: 14px 14px; border: 1px solid #ccc; width: 100%">
+            <i class="glyphicon glyphicon-calendar fa fa-calendar"></i>&nbsp;
+            <span></span> <b class="caret"></b>
+        </div>
+    </li>
+    <!-- Javascript for datepicker --> 
     <script type="text/javascript">
-      $(document).ready(function() {
-        // Function to get values of key-value pairs in URL 
-        var getUrlParameter = function getUrlParameter(sParam) {
-          var sPageURL = decodeURIComponent(window.location.search.substring(1)), sURLVariables = sPageURL.split('&'), sParameterName, i;
-          for (i = 0; i < sURLVariables.length; i++) {
-            sParameterName = sURLVariables[i].split('=');
-            if (sParameterName[0] === sParam) {
-              return sParameterName[1] === undefined ? true : sParameterName[1];
+        $(document).ready(function() {
+            // MOVE THIS TO HELPERS
+            // Function to get values of key-value pairs in URL 
+            var getUrlParameter = function getUrlParameter(sParam) {
+                var sPageURL = decodeURIComponent(window.location.search.substring(1)), sURLVariables = sPageURL.split('&'), sParameterName, i;
+                for (i = 0; i < sURLVariables.length; i++) {
+                    sParameterName = sURLVariables[i].split('=');
+                    if (sParameterName[0] === sParam) {
+                        return sParameterName[1] === undefined ? true : sParameterName[1];
+                    }
+                }
+            };
+
+            // Initially, the start and end dates displayed by the datepicker are set to the past month
+            var start = moment().subtract(1, 'months');
+            var end = moment();
+            // If there are start and end dates in the URL parameter, they are set to those dates
+            if (getUrlParameter('datestart') != true) {
+                start = getUrlParameter('datestart');
+                start = moment(start);
+            };
+            if (getUrlParameter('dateend') != true) {
+                end = getUrlParameter('dateend');
+                end = moment(end);
+            };
+
+            // Called each time the page loads -- updates the dates the datepicker is displaying according to choice
+            function on_load(start, end) {
+                $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+                $('#reportrangespan').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
             }
-          }
-        };
-        // Initially, the start and end dates displayed by the datepicker are set to the past month
-        var start = moment().subtract(1, 'months');
-        var end = moment();
-        // If there are start and end dates in the URL parameter, they are set to those dates
-        if (getUrlParameter('datestart') != true) {
-          start = getUrlParameter('datestart');
-          start = moment(start);
-        };
-        if (getUrlParameter('dateend') != true) {
-          end = getUrlParameter('dateend');
-          end = moment(end);
-        };
-        // Called each time the page loads -- updates the dates the datepicker is displaying according to choice
-        function on_load(start, end) {
-          $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
-          $('#reportrangespan').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
-        }
-        // Called when a new date is picked -- reloads the page with new dates for backend
-        function refresh_page(start, end) {
-          duration_start = '0'
-          duration_end = 'end'
-          if (getUrlParameter('durationstart') != true) {
-            duration_start = getUrlParameter('durationstart')
-          }
-          if (getUrlParameter('durationend') != true) {
-            duration_end = getUrlParameter('durationend')
-          }
-          url = window.location.href;
-          if (url.includes('overview')) {
-            window.location.href = "/overview?durationstart=" + duration_start + "&durationend=" + duration_end + "&datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
-          }
-          else if (url.includes('download')) {
-            window.location.href = "/download?datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
-          }
-          else if (url.includes('hcreports')) {
-            window.location.href = "/hcreports?datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
-          }
-          else {
-            window.location.href = "/public?durationstart=" + duration_start + "&durationend=" + duration_end + "&datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
-          }
-        }
-        // Set up the innards of the datepicker -- pre-set ranges, initially selected start and end dates
-        $('#reportrange').daterangepicker({
-          startDate: start,
-          endDate: end,
-          ranges: {
-            'Past Week': [moment().subtract(1, 'weeks'), moment()],
-            'Past Month': [moment().subtract(1, 'months'), moment()],
-            'Past Quarter': [moment().subtract(3, 'months'), moment()],
-            'Past Semester': [moment().subtract(6, 'months'), moment()],
-            'Past Year': [moment().subtract(1, 'years'), moment()]
-          }
-        }, refresh_page);
-        // Run on the on_load function
-        on_load(start, end);    
-      });
+            
+            // MOVE THIS TO HELPERS
+            // Called when a new date is picked -- reloads the page with new dates for backend
+            function refresh_page(start, end) {
+                duration_start = '0'
+                duration_end = 'end'
+                if (getUrlParameter('durationstart') != true) {
+                    duration_start = getUrlParameter('durationstart')
+                }
+                if (getUrlParameter('durationend') != true) {
+                    duration_end = getUrlParameter('durationend')
+                }
+                url = window.location.href;
+                if (url.includes('overview')) {
+                    window.location.href = "/overview?durationstart=" + duration_start + "&durationend=" + duration_end + "&datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
+                }
+                else if (url.includes('download')) {
+                    window.location.href = "/download?datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
+                }
+                else if (url.includes('hcreports')) {
+                    window.location.href = "/hcreports?datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
+                }
+                else {
+                    window.location.href = "/public?durationstart=" + duration_start + "&durationend=" + duration_end + "&datestart=" + start.format('YYYY-MM-DD') + "&dateend=" + end.format('YYYY-MM-DD');
+                }
+            }
+
+            // Set up the innards of the datepicker -- pre-set ranges, initially selected start and end dates
+            $('#reportrange').daterangepicker({
+                startDate: start,
+                endDate: end,
+                ranges: {
+                    'Past Week': [moment().subtract(1, 'weeks'), moment()],
+                    'Past Month': [moment().subtract(1, 'months'), moment()],
+                    'Past Quarter': [moment().subtract(3, 'months'), moment()],
+                    'Past Semester': [moment().subtract(6, 'months'), moment()],
+                    'Past Year': [moment().subtract(1, 'years'), moment()]
+                }
+            }, refresh_page);
+
+            // Run on the on_load function
+            on_load(start, end);    
+        });
     </script>
-  </li>
+  
 {% endblock %}
                         

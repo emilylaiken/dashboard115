@@ -142,6 +142,7 @@ def generateSQL(table, starting_date_string, ending_date_string, duration_string
 
 # Given three SQL statements (one for the chart, one for the total, and one for the average), executes the SQL statements and calls the helper chart function to create the chart
 def generateFigures(chart_sql, total_sql, avg_sql, title):
+    num_days = (datetime.datetime.strptime(request.args.get('dateend'), '%Y-%m-%d') - datetime.datetime.strptime(request.args.get('datestart'), '%Y-%m-%d')).days + 1
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
     cur.execute(chart_sql)
@@ -152,23 +153,18 @@ def generateFigures(chart_sql, total_sql, avg_sql, title):
         dates = dates + [log[0]]
         numcalls = numcalls + [log[1]]
     chart = helpers.calls_by_day(dates, numcalls, title)
-    # Average
+    # Total
     cur.execute(total_sql)
     totals = cur.fetchall()
     total = totals[0][0]
-    # Average by day
-    # If the total is zero, we already know the average is zero
-    if total == 0:
-        avg = 0
-    else:
-        cur.execute(avg_sql)
-        avgs = cur.fetchall()
-        avg = int(round(avgs[0][0]))
+    # Average
+    avg = total/num_days
     con.close()
     return (chart, total, avg)
 
 # Same as the above function, but the chart created by this function is downloadable
 def generateFiguresDownload(chart_sql, total_sql, avg_sql, title, filename):
+    num_days = (datetime.datetime.strptime(request.args.get('dateend'), '%Y-%m-%d') - datetime.datetime.strptime(request.args.get('datestart'), '%Y-%m-%d')).days + 1
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
     cur.execute(chart_sql)
@@ -184,12 +180,7 @@ def generateFiguresDownload(chart_sql, total_sql, avg_sql, title, filename):
     totals = cur.fetchall()
     total = totals[0][0]
     # Average by day
-    if total == 0:
-        avg = 0
-    else:
-        cur.execute(avg_sql)
-        avgs = cur.fetchall()
-        avg = int(round(avgs[0][0]))
+    avg = total/num_days
     con.close()
     return (total, avg)
 
@@ -253,6 +244,7 @@ def public():
     totals.append(total)
     averages.append(avg)
     #Disease charts (tracking visits to overview and prevention information)
+    num_days = (datetime.datetime.strptime(request.args.get('dateend'), '%Y-%m-%d') - datetime.datetime.strptime(request.args.get('datestart'), '%Y-%m-%d')).days + 1
     public_diseases = ["h5n1", "mers", "zika"]
     for disease in public_diseases:
         menu_string = disease + "_menu"
@@ -277,10 +269,7 @@ def public():
         total = cur.fetchall()
         totals.append(total[0][0])
         #Average visits to menu
-        days_sql = "SELECT count(DISTINCT date) FROM calls"
-        cur.execute(days_sql)
-        num_days = cur.fetchall()
-        averages.append(total[0][0]/num_days[0][0]);
+        averages.append(total[0][0]/num_days);
     #Public reports by day chart
     condition_string = "public_report_confirmation='0'"
     chart_sql, total_sql, avg_sql = generateSQL("public", starting_date_string, ending_date_string, duration_string, condition_string)
@@ -402,95 +391,6 @@ def hcreports():
     chart4 = helpers.case_reports_by_week(dates, diarrhea, fever, flaccid, respiratory, dengue, meningitis, jaundice, diphteria, rabies, neonatal, "Reports of Disease Deaths by Week")
     con.close()
     return render_template("hcreports.html", chart2=chart2, chart3=chart3, chart4=chart4)
-
-@app.route("/explore", methods=["GET", "POST"])
-def explore():
-    # Check for log in
-    if not session.get('logged_in'):
-        return redirect(url_for('index'))
-
-    # Parse dates from URL parameters
-    starting_date_string = '2015-09-03'
-    ending_date_string = '2017-08-29'
-
-    con = sqlite3.connect("logs115.db")
-    cur = con.cursor()
-    #Generate first chart: attempted & completed HC reports by week
-    cur.execute('SELECT diarrhea_cases FROM hc_reports WHERE diarrhea_cases > 100')
-    raws = cur.fetchall()
-    cases = [raw[0] for raw in raws]
-    figure1 = {
-        "data": [
-            {
-                "type": "histogram",
-                "x": cases,
-                "xbins": {
-                    "start": 100,
-                    "end": 1000,
-                    "size": 100
-                },
-                "marker": {
-                    "color": '#ED7D31'
-                } 
-            }
-        ],
-        "layout": {
-            "title": "Histogram of Diarrhea Cases in Disease Reports (Reports with >100 Cases)",
-            "showlegend": False
-        }
-    }
-    plot1 = plotly.offline.plot(figure1, output_type="div", show_link=False, link_text=False)
-    cur.execute('SELECT duration FROM calls')
-    raws = cur.fetchall()
-    data = [raw[0] for raw in raws]
-    figure2 = {
-        "data": [
-            {
-                "type": "histogram",
-                "x": data,
-                "xbins": {
-                    "start": 0,
-                    "end": 300,
-                    "size": 10
-                },
-                "marker": {
-                    "color": '#659A41'
-                },  
-            }
-        ],
-        "layout": {
-            "title": "Histogram of Call Times (Only Calls Under 300 Seconds)",
-            "showlegend": False,
-        }
-    }
-    plot2 = plotly.offline.plot(figure2, output_type="div", show_link=False, link_text=False)
-    cur.execute('SELECT status, COUNT(*) as count FROM calls WHERE duration > 10 GROUP BY status')
-    raws = cur.fetchall()
-    lables = [raw[0] for raw in raws]
-    data = [raw[1] for raw in raws]
-    figure3 = {
-        "data": [
-            {
-                "labels": lables,
-                "hoverinfo": "none",
-                #"marker": {
-                 #   "colors": [
-                  #      "rgb(0,255,00)",
-                   #     "rgb(255,0,0)",
-                    #]
-                #},
-                "type": "pie",
-                "values": data
-            }
-        ],
-        "layout": {
-            "title": "Calls by Status",
-            "showlegend": True
-            }
-    }
-    plot3 = plotly.offline.plot(figure3, output_type="div", show_link=False, link_text=False)
-    con.close()
-    return render_template("explore.html", plot1 = plot1, plot2 = plot2, plot3 = plot3)
 
 ########## DOWNLOADABLE REPORTS ##########
 # Append PDFs (input files) to a PDF file writer (output)
@@ -808,7 +708,7 @@ def upload():
     elif request.args.get('step') == '2':
         return render_template("upload2.html")
     elif request.args.get('step') == 'template':
-        return send_file('call_logs_template.csv', as_attachment = True)
+        return send_file('static/call_logs_template.csv', as_attachment = True)
     else:
         return render_template("upload3.html")
 
