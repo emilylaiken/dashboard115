@@ -171,10 +171,12 @@ def dataload():
         filename = secure_filename(csv.filename)
         csv.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         # Upload data from the saved file to the dashboard
-        uhelpers.loadData("uploads/" + filename)
+        uploaded = uhelpers.loadData("uploads/" + filename)
+        if uploaded[0] != 'N':
+            return render_template("uploadfail.html", message=uploaded)
     else:
-        return render_template("uploadfail.html")
-    return render_template("uploadcomplete.html")
+        return render_template("uploadfail.html", 'Unknown reason.')
+    return render_template("uploadcomplete.html", message=uploaded)
 
 # Run application
 if __name__ == "__main__":

@@ -40,18 +40,28 @@ def parseDateTime(fulldate):
 
 # Given the CSV file name, loads the call logs into memory (if they are not duplicates of previously loaded logs)
 def loadData(data_file_name):
+    # Check that all required variables are present
+    req_attributes = ['ID', 'Started', 'Caller interaction', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'h5n1_menu', 'h5n1_overview_menu',
+    'h5n1_prevention_menu', 'mers_menu', 'mers_overview_menu', 'mers_prevention_menu', 'zika_menu', 'zika_overview_menu', 'public_report_confirmation', 
+    'cdc_report_started', 'cdc_report_ended', 'disease_type', 'var_dairrhea_case', 'var_dairrhea_death', 'var_fever_case', 'var_fever_death', 'var_flaccid_case', 
+    'var_flaccid_death', 'var_diphteria_case', 'var_diphteria_death', 'var_rabies_case', 'var_rabies_death', 'va_neonatal_case', 'var_neonatal_death']
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS calls (call_id integer primary key, date varchar, time time, week_id varchar, duration integer, caller_id integer, status varchar, type varchar);")
     cur.execute("CREATE TABLE IF NOT EXISTS hc_reports (call_id integer primary key, level_worker integer, completed varchar, disease_type integer, diarrhea_cases integer, diarrhea_deaths integer, fever_cases integer, fever_deaths integer, flaccid_cases integer, flaccid_deaths integer, respiratory_cases integer, respiratory_deaths integer, dengue_cases integer, dengue_deaths integer, meningitis_cases integer, meningitis_deaths integer, jaundice_cases integer, jaundice_deaths integer, diphteria_cases integer, diphteria_deaths integer, rabies_cases integer, rabies_deaths integer, neonatal_cases integer, neonatal_deaths integer);")
     cur.execute("CREATE TABLE IF NOT EXISTS  public_interactions (call_id integer primarykey, hotline_menu integer, disease_menu integer, h5n1_menu integer, h5n1_overview_menu integer, h5n1_prevention_menu integer, mers_menu integer, mers_overview_menu integer, mers_prevention_menu integer, zika_menu integer, zika_overview_menu integer, zika_prevention_menu integer, public_report_confirmation integer);")
+    numInserted = 0
+    numDuplicates = 0
     with open(data_file_name, 'rU') as fin: # In-file is rawcalls.csv
         dr = csv.DictReader(fin) # First line is used as column headers by default
+        for req_attribute in req_attributes:
+            if req_attribute not in dr.fieldnames:
+                print(req_attribute, file=sys.stderr)
+                return "Missing attribute: " + req_attribute
         prev_date = ""
         week_id = ""
         day_counter = 7
         for call in dr:
-            #print("reading call " + call['ID'], file=sys.stderr)
             # Record general info--call ID, date, time, caller ID, status, level of worker, and cdc report confirmations
             if call['ID'] == "": # If we are passed the end of the call records, stop
                 break
@@ -98,5 +108,9 @@ def loadData(data_file_name):
                             interaction = interaction + (call[menu],)
                     to_db = [(call['ID'],) + interaction]
                     cur.executemany("INSERT INTO public_interactions (call_id, hotline_menu, disease_menu, h5n1_menu, h5n1_overview_menu, h5n1_prevention_menu, mers_menu, mers_overview_menu, mers_prevention_menu, zika_menu, zika_overview_menu, zika_prevention_menu, public_report_confirmation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", to_db)
+                numInserted = numInserted + 1
+            else:
+                numDuplicates = numDuplicates + 1
     con.commit()
     con.close()
+    return "Number of call logs successfully loaded: " + str(numInserted) + ". Number of duplicates (not loaded): " + str(numDuplicates) + "."
