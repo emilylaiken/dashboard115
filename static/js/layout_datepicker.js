@@ -1,4 +1,4 @@
-$(document).ready(function() {
+function setUpPicker() {
     // Function to get values of key-value pairs in URL 
     var getUrlParameter = function getUrlParameter(sParam) {
         var sPageURL = decodeURIComponent(window.location.search.substring(1)), sURLVariables = sPageURL.split('&'), sParameterName, i;
@@ -10,6 +10,7 @@ $(document).ready(function() {
         }
     };
     
+    ////////////////////////////// SET UP REDIRECT URLS FOR WHEN A NEW RANGE IS SELECTED //////////////////////////////////////
     // Reload page to same URL with new parameters when a new date is selected
     function refresh_page(start, end) {
         duration_start = '0'
@@ -35,7 +36,7 @@ $(document).ready(function() {
         }
     }
 
-    // Set up default date ranges in datepicker
+    ///////////////////////////// SET UP WHICH RANGE WILL BE DEFAULT SELECTED AND PRE-CHOSEN OPTIONS ////////////////////////
     // Function to get most recent Wednesday--used in finding last week
     function get_last_wed() {
         today = moment().day()
@@ -51,19 +52,13 @@ $(document).ready(function() {
         thisMonth = moment().month();
         return [moment().startOf('month').subtract(numMonths + (thisMonth % numMonths), 'months'), moment().startOf('month').subtract(thisMonth % numMonths, 'months').subtract(1, 'days')]
     }
-
-    var start = getPeriod(12)[0];
-    var end = getPeriod(12)[1];
     
-    // Choose which dates are selected (either according to URL parameters or, if no parameters, by default) and display them in datepicker
-    if (getUrlParameter('datestart') != true) {
-        start = getUrlParameter('datestart');
-        start = moment(start);
-    };
-    if (getUrlParameter('dateend') != true) {
-        end = getUrlParameter('dateend');
-        end = moment(end);
-    };
+    // Choose which dates are selected according to URL parameters and display them in datepicker
+    start = getUrlParameter('datestart');
+    start = moment(start);
+    end = getUrlParameter('dateend');
+    end = moment(end);
+
     $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
     $('#reportrangespan').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY')); 
     
@@ -79,7 +74,7 @@ $(document).ready(function() {
         }
     }, refresh_page);
 
-    // Set up menu bar with current URL parameters
+    /////////////////////////////////////// SET UP MENU BAR URLS BASED ON CURRENT PARAMETERS /////////////////////////////
     function getMenuUrl(base) {
         if (base == '/overview' || base == '/public') {
             return base + '?datestart=' + getUrlParameter('datestart') + '&dateend=' + getUrlParameter('dateend') + "&durationstart=" + getUrlParameter('durationstart') + "&durationend=" + getUrlParameter('durationend');
@@ -96,4 +91,4 @@ $(document).ready(function() {
         return false;
     };
     setUpMenu();
-});
+};

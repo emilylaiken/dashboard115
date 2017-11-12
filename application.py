@@ -128,6 +128,9 @@ def downloading():
     # Check for all necessary parameters
     if helpers.timeArgsMissing():
         return redirect(helpers.redirectWithArgs('/downloading'))
+    # Check for necessary elements from form
+    if request.form['email'] == None or request.form['email'] == "":
+        return render_template("downloadfail.html", message="Please enter an email address.")
     # Fork thread to send email with PDF report
     num_days = (datetime.datetime.strptime(request.args.get('dateend'), '%Y-%m-%d') - datetime.datetime.strptime(request.args.get('datestart'), '%Y-%m-%d')).days + 1
     th = Thread(target=dhelpers.genReport, args=(request.args.get('datestart'), request.args.get('dateend'), request.form['qualitative'], request.form['email'], url_for('downloaded'), num_days))

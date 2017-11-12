@@ -4,20 +4,6 @@ import sqlite3
 import datetime
 from flask import Flask, redirect, render_template, request, url_for, send_file, session
 
-# Get the URL with current parameters for any links to the overview page
-def overview_url():
-    url = '/overview'
-    if request.args.get('datestart') != none and request.args.get('dateend') != none and request.args.get('durationstart') != none and request.args.get('durationend') != none:
-        url = url + "?datestart=" + request.args.get('datestart') + "&dateend=" + request.args.get('dateend') + "&durationstart=" + request.args.get('durationstart') + "&durationend=" + request.args.get('durationend')
-    return url 
-
-# Get the URL with current parameters for any links to the public page
-def public_url():
-    url = '/public'
-    if request.args.get('datestart') != none and request.args.get('dateend') != none and request.args.get('durationstart') != none and request.args.get('durationend') != none:
-        url = url + "?datestart=" + request.args.get('datestart') + "&dateend=" + request.args.get('dateend') + "&durationstart=" + request.args.get('durationstart') + "&durationend=" + request.args.get('durationend')
-    return url
-
 # If there is no login yet, sets login to "cdc" and "cdc", otherwise finds out what the current login is 
 def getCorrectLogin():
     con = sqlite3.connect("logs115.db")
@@ -42,11 +28,20 @@ def getCorrectLogin():
 
 # Check if there are any date/duration arguments missing (datestart, dateend, durationstart, or durationend)
 def argsMissing():
-    return request.args.get('datestart') == None or request.args.get('dateend') == None or request.args.get('durationstart') == None or request.args.get('durationend') == None
+    return timeArgsMissing() or request.args.get('durationstart') == None or request.args.get('durationend') == None
 
 # Check if there are any date arguments missing (datestart, dateend)
 def timeArgsMissing():
-    return request.args.get('datestart') == None or request.args.get('dateend') == None 
+    # Check that date arguments are there
+    if request.args.get('datestart') == None or request.args.get('dateend') == None:
+        return True
+    # Check that date arguments are in proper format
+    try:
+        temp = datetime.datetime.strptime(request.args.get('datestart'), '%Y-%m-%d')
+        temp = datetime.datetime.strptime(request.args.get('dateend'), '%Y-%m-%d')
+    except:
+        return True
+    return False
 
 # Used when there are date/duration arguments missing. Returns the base URL with default time and duration arguments.
 def redirectWithArgs(base):

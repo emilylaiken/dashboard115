@@ -30,7 +30,7 @@ function getUrl(durationstart, durationend) {
 };
 
 // Set up druation filter text
-window.onload = function() {
+function setUpFilter() {
     if (getUrlParameter('durationstart') == true || getUrlParameter('durationstart') == true) {
         document.getElementById("dfilter").innerHTML = 'Duration: All <span class="caret"></span>';
     }

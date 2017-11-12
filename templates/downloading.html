@@ -3,4 +3,7 @@
 
 {% block body %}
 	<p> Your report is being generated. You will recieve an email when it is finished. </p>
+	<form action="/overview" method="GET">
+		<button type="submit" class="btn btn-default">Back to Dashboard</button>
+	</form>
 {% endblock %}

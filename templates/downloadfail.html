@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% set active_page = "downloadlink" %}
+
+{% block body %}
+	<p> Report could not be generated. {{ message }}</p>
+	<form action="/download" method="GET">
+		<button type="submit" class="btn btn-default">Back to Download Report</button>
+	</form>
+{% endblock %}

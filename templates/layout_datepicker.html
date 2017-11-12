@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block datepicker %}
-    <script type="text/javascript" src={{ url_for('static', filename="js/layout_datepicker.js")}}></script> 
+	<script type="text/javascript" src={{ url_for('static', filename="js/layout_datepicker.js")}}></script> 
     <!-- HTML for datepicker --> 
     <li>
         <div id="reportrange" class="pull-right" style="background: #fff; cursor: pointer; padding: 14px 14px; border: 1px solid #ccc; width: 100%">
@@ -8,5 +8,8 @@
             <span></span> <b class="caret"></b>
         </div>
     </li>
+    <script type="text/javascript">
+    	setUpPicker();
+    </script>
 {% endblock %}
                         

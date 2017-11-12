@@ -8,7 +8,7 @@
     <script type="text/javascript" src={{ url_for('static', filename="js/layout_durationfilter.js")}}></script> 
     <!-- HTML for duration filter --> 
     <li class="dropdown">
-        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" id="dfilter">Filter Duration <span class="caret"></span></a>
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false" id="dfilter"> <span class="caret"></span></a>
         <ul class="dropdown-menu" >
             <!-- Three pre-selected duration ranges: 0-5 minutes, 5-10 minutes, and 10+ minutes, as well as all calls -->
             <li><a onclick="getUrl(0, 5)" href="#">0 - 5 minutes</a></li>
@@ -18,6 +18,9 @@
             <li><a onclick="getUrl(0, 'end')" href="#">All</a></li>
         </ul>
     </li>
+    <script type="text/javascript">
+        setUpFilter();
+    </script>
 {% endblock %}
 
 </body>
