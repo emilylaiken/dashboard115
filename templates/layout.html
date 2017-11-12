@@ -25,7 +25,20 @@
                         <div id="navbar" class="navbar-collapse collapse">
                             <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                                 <!-- Left part of navbar: links to pages in dashboard --> 
-                                {% block navbarleft %}{% endblock %}
+                                {% set navigation_bar = [
+                                    ('/overview', 'overviewlink', 'Overview'),
+                                    ('/public', 'publiclink', 'Public Hotline'),
+                                    ('/hcreports', 'hcreportslink', 'HC Worker Reports'),
+                                    ('/upload', 'uploadlink', 'Upload Data'),
+                                    ('/download', 'downloadlink', 'Download Report')
+                                ] -%}
+                                {% set active_page = active_page|default('overviewlink') -%}
+                                <ul class="nav navbar-nav">
+                                    {% for href, id, caption in navigation_bar %}
+                                        <li{% if id == active_page %} class="active"{% endif%}><a href="{{ href|e }}" id="{{ id|e }}">{{ caption|e }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                                <!--{% block navbarleft %}{% endblock %} -->
                                 <ul class="nav navbar-nav navbar-right">
                                     <!-- Right part of navbar: duration and date filters --> 
                                     {% block durationfilter %}{% endblock %}

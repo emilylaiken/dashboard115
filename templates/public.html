@@ -1,18 +1,5 @@
 {% extends "layout_durationfilter.html" %}
-
-{% block subtext %}
-{{ name }}
-{% endblock %}
-
-{% block navbarleft %}
-	<ul class="nav navbar-nav">
-		<li ><a href="/overview" id='overviewlink'>Overview<span class="sr-only">(current)</span></a></li>
-	    <li class="active"><a href="/public" id='publiclink'>Public Hotline <span class="sr-only">(current)</span></a></li>
-	    <li><a href="/hcreports" id='hcreportslink'>HC Worker Reports</a></li>
-	    <li><a href="/upload">Upload Data</a></li>
-	    <li><a href="/download">Download Report</a></li>
-	</ul>
-{% endblock %}
+{% set active_page = "publiclink" %}
 
 {% block body %}
 	{% for chart, total, avg in figures %}

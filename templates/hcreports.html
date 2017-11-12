@@ -1,20 +1,11 @@
 {% extends "layout_datepicker.html" %}
-
-{% block navbarleft %}
-	<ul class="nav navbar-nav">
-		<li><a href="/overview?durationstart=0&durationend=end" id='overviewlink'>Overview<span class="sr-only">(current)</span></a></li>
-	    <li><a href="/public?durationstart=0&durationend=end" id='publiclink'>Public Hotline</a></li>
-	    <li class="active"><a href="/hcreports" id='hcreportslink'>HC Worker Reports<span class="sr-only">(current)</span></a></li>
-	    <li><a href="/upload">Upload Data</a></li>
-	    <li><a href="/download">Download Report</a></li>
-	</ul>
-{% endblock %}
+{% set active_page = "hcreportslink" %}
 
 {% block durationfilter %}
 {% endblock %}
 
 {% block body %}
-	{{ chart2 | safe }}
-	{{ chart3 | safe }}
-	{{ chart4 | safe }}
+	{% for chart in charts %}
+		{{ chart | safe }}
+	{% endfor %}
 {% endblock %}

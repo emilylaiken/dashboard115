@@ -1,18 +1,5 @@
 {% extends "layout_datepicker.html" %}
-
-{% block subtext %}
-{{ name }}
-{% endblock %}
-
-{% block navbarleft %}
-	<ul class="nav navbar-nav">
-		<li><a href="/overview?durationstart=0&durationend=end">Overview<span class="sr-only">(current)</span></a></li>
-	    <li><a href="/public?durationstart=0&durationend=end">Public Hotline</a></li>
-	    <li><a href="/hcreports">HC Worker Reports</a></li>
-	    <li><a href="/upload">Upload Data</a></li>
-	    <li class="active"><a href="/download">Download Report</a><span class="sr-only">(current)</span></li>
-	</ul>
-{% endblock %}
+{% set active_page = "downloadlink" %}
 
 {% block body %}
 	<p> The report PDF includes three sections: a qualitative paragraph, statistics, and the graphs as displayed on this dashboard. Select the time period for the report using the filter at upper right. Then, input the qualitative description and your email in the box below. Upon clicking the "email me the report" button, the system will begin to process your PDF report. You will be notified by email when the report is ready, including a link through which you can access the report. </p>
