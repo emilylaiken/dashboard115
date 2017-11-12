@@ -36,20 +36,6 @@ $(document).ready(function() {
     }
 
     // Set up default date ranges in datepicker
-    var start = moment().subtract(1, 'months');
-    var end = moment();
-    // Choose which dates are selected (either according to URL parameters or, if no parameters, by default) and display them in datepicker
-    if (getUrlParameter('datestart') != true) {
-        start = getUrlParameter('datestart');
-        start = moment(start);
-    };
-    if (getUrlParameter('dateend') != true) {
-        end = getUrlParameter('dateend');
-        end = moment(end);
-    };
-    $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
-    $('#reportrangespan').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY')); 
-
     // Function to get most recent Wednesday--used in finding last week
     function get_last_wed() {
         today = moment().day()
@@ -65,7 +51,22 @@ $(document).ready(function() {
         thisMonth = moment().month();
         return [moment().startOf('month').subtract(numMonths + (thisMonth % numMonths), 'months'), moment().startOf('month').subtract(thisMonth % numMonths, 'months').subtract(1, 'days')]
     }
-    // Set up default ranges in datepicker
+
+    var start = getPeriod(12)[0];
+    var end = getPeriod(12)[1];
+    
+    // Choose which dates are selected (either according to URL parameters or, if no parameters, by default) and display them in datepicker
+    if (getUrlParameter('datestart') != true) {
+        start = getUrlParameter('datestart');
+        start = moment(start);
+    };
+    if (getUrlParameter('dateend') != true) {
+        end = getUrlParameter('dateend');
+        end = moment(end);
+    };
+    $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
+    $('#reportrangespan').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY')); 
+    
     $('#reportrange').daterangepicker({
         startDate: start,
         endDate: end,

@@ -51,7 +51,8 @@ def timeArgsMissing():
 # Used when there are date/duration arguments missing. Returns the base URL with default time and duration arguments.
 def redirectWithArgs(base):
     now_date = datetime.datetime.now()
-    now_string = now_date.strftime("%Y-%m-%d")
-    month_ago = now_date - datetime.timedelta(days = 30)
-    monthago_string = month_ago.strftime("%Y-%m-%d")
-    return base + '?datestart=' + monthago_string + '&dateend=' + now_string + '&durationstart=0&durationend=end'
+    beginning = datetime.datetime(year=now_date.year-1, month=1, day=1)
+    end = datetime.datetime(year=now_date.year-1, month=12, day=31)
+    beginning_string = beginning.strftime("%Y-%m-%d")
+    end_string = end.strftime("%Y-%m-%d")
+    return base + '?datestart=' + beginning_string + '&dateend=' + end_string + '&durationstart=0&durationend=end'
