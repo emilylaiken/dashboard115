@@ -41,7 +41,7 @@ def parseDateTime(fulldate):
 # Given the CSV file name, loads the call logs into memory (if they are not duplicates of previously loaded logs)
 def loadData(data_file_name):
     # Check that all required variables are present
-    req_attributes = ['ID', 'Started', 'Caller interaction', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'h5n1_menu', 'h5n1_overview_menu',
+    req_attributes = ['ID', 'Started', 'level_worker', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'h5n1_menu', 'h5n1_overview_menu',
     'h5n1_prevention_menu', 'mers_menu', 'mers_overview_menu', 'mers_prevention_menu', 'zika_menu', 'zika_overview_menu', 'public_report_confirmation', 
     'cdc_report_started', 'cdc_report_ended', 'disease_type', 'var_dairrhea_case', 'var_dairrhea_death', 'var_fever_case', 'var_fever_death', 'var_flaccid_case', 
     'var_flaccid_death', 'var_diphteria_case', 'var_diphteria_death', 'var_rabies_case', 'var_rabies_death', 'va_neonatal_case', 'var_neonatal_death']
@@ -73,11 +73,10 @@ def loadData(data_file_name):
                 time = dateTime[1]
                 day_of_week = datetime.datetime.strptime(date, '%Y-%m-%d').weekday()
                 if not prev_date == date and day_of_week == 2:
-                    week_id = "Week of " + date
+                    week_id = "Week of " + datetime.datetime.strftime(datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=7), '%y-%m-%d')
                 prev_date = date
-                caller_interaction = call['Caller interaction']
                 call_type = 'public'
-                if ("Welcome 0 reporting" in caller_interaction or "Welcome keypad reporting" in caller_interaction):
+                if (call['level_worker'] == '2'):
                     call_type = 'hc_worker'
                 general_info = [(call['ID'], date, time, week_id, call['Duration(second)'], removeAnonymous(call['Caller ID']), call['Status'], call_type)]
                 cur.executemany("INSERT INTO calls (call_id, date, time, week_id, duration, caller_id, status, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?);", general_info)

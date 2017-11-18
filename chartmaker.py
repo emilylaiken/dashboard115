@@ -107,8 +107,8 @@ def calls_by_status(labels, data):
 def reports_by_week(dates, completed, attempted, title):
     figure = {
         "data": [
-            {'x': dates, 'y': completed, 'name': "Completed reports"},
-            {'x': dates, 'y': attempted, 'name': "Attempted reports"},
+            {'x': dates, 'y': completed, 'name': "On-time reports"},
+            {'x': dates, 'y': attempted, 'name': "Late reports"},
         ],
         "layout": {
             "title": title,

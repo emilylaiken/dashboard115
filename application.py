@@ -100,7 +100,7 @@ def hcreports():
         return redirect(helpers.redirectWithArgs('/hcreports'))
     # Create figures
     charts = []
-    charts.append(ghelpers.addCompletedAttemptedChart('calls JOIN hc_reports ON calls.call_id = hc_reports.call_id', "HC Reports by Week (Completed vs Attempted)"))
+    charts.append(ghelpers.addCompletedAttemptedChart('calls JOIN hc_reports ON calls.call_id = hc_reports.call_id', "HC Reports by Week (On-Time vs Late)"))
     diseases = ['diarrhea', 'fever', 'flaccid', 'respiratory', 'dengue', 'meningitis', 'jaundice', 'diphteria', 'rabies', 'neonatal']
     charts.append(ghelpers.addHCReportChart([disease + '_cases' for disease in diseases], "Reports of Disease Cases by Week"))
     charts.append(ghelpers.addHCReportChart([disease + '_deaths' for disease in diseases], "Reports of Disease Deaths by Week"))

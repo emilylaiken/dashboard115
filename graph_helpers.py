@@ -1,7 +1,9 @@
+from __future__ import print_function
 import sqlite3
 import datetime
 from flask import Flask, redirect, render_template, request, url_for, send_file, session
 import chartmaker
+import sys
 
 
 # Get the specified column of a table (used to get specific series for graphs)
@@ -105,8 +107,8 @@ def addDiseaseFigures(diseases, charts, totals, averages):
         menu_string = disease + "_menu"
         overview_string = disease + "_overview_menu"
         prevention_string = disease + "_prevention_menu"
-        condition_string_overview = "(" + menu_string + "=1 OR " + overview_string + "=1 OR " + prevention_string + "=2)"
-        condition_string_prevention = "(" + menu_string + "=2 OR " + overview_string + "=2 OR " + prevention_string + "=1)"
+        condition_string_overview = menu_string + "=1"
+        condition_string_prevention = menu_string + "=2"
         chart_sql_overview, total_sql_overview, avg_sql_overview = generateSQL("public", starting_date_string, ending_date_string, duration_string, condition_string_overview)
         chart_sql_prevention, total_sql_prevention, avg_sql_prevention = generateSQL("public", starting_date_string, ending_date_string, duration_string, condition_string_prevention)
         cur.execute(chart_sql_overview)
@@ -119,7 +121,7 @@ def addDiseaseFigures(diseases, charts, totals, averages):
         disease_chart = chartmaker.overview_and_prevention_by_day(dates, overview, prevention, str.title(disease) + title_addon)
         charts.append(disease_chart)
         #Total visits to menu
-        total_sql = "SELECT count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " AND(" + menu_string + "=1 OR " + menu_string + "=2)"
+        total_sql = "SELECT count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " AND disease_menu = " + str(diseases.index(disease) + 1) + ";"
         cur.execute(total_sql)
         total = cur.fetchall()
         totals.append(total[0][0])
@@ -149,12 +151,12 @@ def addCompletedAttemptedChart(table, title):
     ending_date_string = request.args.get('dateend')
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
-    cur.execute("SELECT week_id, count(calls.call_id) FROM " + table + " WHERE completed = 'true' AND date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " GROUP BY week_id ORDER BY week_id asc;")
+    cur.execute("SELECT week_id, count(calls.call_id) FROM " + table + " WHERE (date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "')" + "AND (CAST (strftime('%w', date) as integer) <= 3) GROUP BY week_id ORDER BY week_id asc;")
     completed_reports_by_week = cur.fetchall()
-    cur.execute("SELECT week_id, count(calls.call_id) FROM " + table + " WHERE date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + "  GROUP BY week_id ORDER BY week_id asc;")
+    cur.execute("SELECT week_id, count(calls.call_id) FROM " + table + " WHERE (date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "')" + "AND (CAST (strftime('%w', date) as integer) > 3) GROUP BY week_id ORDER BY week_id asc;")
     attempted_reports_by_week = cur.fetchall()
     weeks = column(completed_reports_by_week, 0)
     completed = column(completed_reports_by_week, 1)
     attempted = column(attempted_reports_by_week, 1)
     con.close()
-    return chartmaker.reports_by_week(weeks, completed, attempted, "HC Reports by Week (Completed vs Attempted)")
+    return chartmaker.reports_by_week(weeks, completed, attempted, title)
