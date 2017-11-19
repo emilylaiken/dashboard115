@@ -165,20 +165,21 @@ def addOnTimeChart(table, title):
 def addCompletedAttemptedChart(charts, totals, averages):
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
+    duration_string, title_addon = parseDuration(request.args.get('durationstart'), request.args.get('durationend'))
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
     data_public = []
     data_hc = []
     statuses = ['incompleted', 'completed', 'terminated']
     for status in statuses:
-        cur.execute("SELECT count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " AND status == '" + unicode(status) + "';")
+        cur.execute("SELECT count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + duration_string + " AND status == '" + unicode(status) + "';")
         calls_by_status_public = cur.fetchall()
         data_public.append(calls_by_status_public[0][0])
-        cur.execute("SELECT count(calls.call_id) AS count FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " AND status == '" + unicode(status) + "';")
+        cur.execute("SELECT count(calls.call_id) AS count FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + duration_string + " AND status == '" + unicode(status) + "';")
         calls_by_status_hc = cur.fetchall()
         data_hc.append(calls_by_status_hc[0][0])
     con.close()
-    charts.append(chartmaker.calls_by_status(statuses, data_public, data_hc))
+    charts.append(chartmaker.calls_by_status(statuses, data_public, data_hc, "Calls by Status" + title_addon))
     totals.append(None)
     averages.append(None)
     return charts, totals, averages

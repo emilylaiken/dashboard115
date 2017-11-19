@@ -87,7 +87,7 @@ def overview_and_prevention_by_day(dates, overview, prevention, title):
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
-def calls_by_status(labels, data_public, data_hc):
+def calls_by_status(labels, data_public, data_hc, title):
     figure = {
     'data': [
         {
@@ -112,7 +112,7 @@ def calls_by_status(labels, data_public, data_hc):
 
         }
     ],
-    'layout': {'title': 'Calls: Completed vs. Attempted',
+    'layout': {'title': title,
                'showlegend': True,
                'annotations': [
                     {
