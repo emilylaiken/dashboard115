@@ -146,7 +146,7 @@ def addHCReportChart(condition_strings, title):
     return chartmaker.case_reports_by_week(dates, series, title)
 
 # Adds multi-series completed vs. attempted figure to the page's list of figures
-def addCompletedAttemptedChart(table, title):
+def addOnTimeChart(table, title):
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
     con = sqlite3.connect("logs115.db")
@@ -160,3 +160,28 @@ def addCompletedAttemptedChart(table, title):
     attempted = column(attempted_reports_by_week, 1)
     con.close()
     return chartmaker.reports_by_week(weeks, completed, attempted, title)
+
+# Adds multi-series completed vs. attempted figure to the page's list of figures
+def addCompletedAttemptedChart(charts, totals, averages):
+    starting_date_string = request.args.get('datestart')
+    ending_date_string = request.args.get('dateend')
+    con = sqlite3.connect("logs115.db")
+    cur = con.cursor()
+    data_public = []
+    data_hc = []
+    statuses = ['incompleted', 'completed', 'terminated']
+    for status in statuses:
+        cur.execute("SELECT count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " AND status == '" + unicode(status) + "';")
+        calls_by_status_public = cur.fetchall()
+        data_public.append(calls_by_status_public[0][0])
+        cur.execute("SELECT count(calls.call_id) AS count FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE date >= " + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "'" + " AND status == '" + unicode(status) + "';")
+        calls_by_status_hc = cur.fetchall()
+        data_hc.append(calls_by_status_hc[0][0])
+    con.close()
+    charts.append(chartmaker.calls_by_status(statuses, data_public, data_hc))
+    totals.append(None)
+    averages.append(None)
+    return charts, totals, averages
+
+
+

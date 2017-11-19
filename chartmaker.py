@@ -87,20 +87,58 @@ def overview_and_prevention_by_day(dates, overview, prevention, title):
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
-def calls_by_status(labels, data):
+def calls_by_status(labels, data_public, data_hc):
     figure = {
-        "data": [
-            {
-                "labels": labels,
-                "type": "pie",
-                "values": [data[0], data[1], data[2], data[3]]
-            }
-        ],
-        "layout": {
-            "title": "Public calls by Status",
-            "showlegend": True
+    'data': [
+        {
+            'labels':  labels,
+            'values': data_public,
+            'type': 'pie',
+            'name': 'Public',
+            'domain': {'x': [0, .5],
+                       'y': [.4, .9]},
+            'hoverinfo':'label+percent+name',
+            'textinfo':'none'
+        },
+        {
+            'labels': labels,
+            'values': data_hc,
+            'type': 'pie',
+            'name': 'HC Workers',
+            'domain': {'x': [.5, 1],
+                       'y': [.4, .9]},
+            'hoverinfo':'label+percent+name',
+            'textinfo':'none'
+
         }
+    ],
+    'layout': {'title': 'Calls: Completed vs. Attempted',
+               'showlegend': True,
+               'annotations': [
+                    {
+                        'xref': 'paper',
+                        'yref': 'paper',
+                        'x': .27,
+                        'xanchor': 'right',
+                        'y': .94,
+                        'yanchor': 'bottom',
+                        'text': 'Public',
+                        'showarrow': False
+                    },
+                    {
+                        'xref': 'paper',
+                        'yref': 'paper',
+                        'x': .78,
+                        'xanchor': 'right',
+                        'y': .94,
+                        'yanchor': 'bottom',
+                        'text': 'HC Workers',
+                        'showarrow': False
+                    }
+                ]
+            }
     }
+
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
 

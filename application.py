@@ -71,6 +71,7 @@ def overview():
     # Create figures
     charts, totals, averages = [], [], []
     charts, totals, averages = ghelpers.addFigure(condition_string = "call_id != ''", table='all', title="Calls to Entire Hotline by Day", charts=charts, totals=totals, averages=averages)
+    charts, totals, averages = ghelpers.addCompletedAttemptedChart(charts, totals, averages)
     return render_template("overview.html", figures = zip(charts, totals, averages))
 
 @app.route("/public", methods=["GET", "POST"])
@@ -100,7 +101,7 @@ def hcreports():
         return redirect(helpers.redirectWithArgs('/hcreports'))
     # Create figures
     charts = []
-    charts.append(ghelpers.addCompletedAttemptedChart('calls JOIN hc_reports ON calls.call_id = hc_reports.call_id', "HC Reports by Week (On-Time vs Late)"))
+    charts.append(ghelpers.addOnTimeChart('calls JOIN hc_reports ON calls.call_id = hc_reports.call_id', "HC Reports by Week (On-Time vs Late)"))
     diseases = ['diarrhea', 'fever', 'flaccid', 'respiratory', 'dengue', 'meningitis', 'jaundice', 'diphteria', 'rabies', 'neonatal']
     charts.append(ghelpers.addHCReportChart([disease + '_cases' for disease in diseases], "Reports of Disease Cases by Week"))
     charts.append(ghelpers.addHCReportChart([disease + '_deaths' for disease in diseases], "Reports of Disease Deaths by Week"))

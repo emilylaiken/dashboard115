@@ -4,8 +4,10 @@
 {% block body %}
 	{% for chart, total, avg in figures %}
 		{{ chart | safe }}
-		<p> <b> Total: </b> {{ total }}</p>
-		<p> <b> Average (per day): </b> {{ avg}} </p>
+		{% if total is not none %}
+			<p> <b> Total: </b> {{ total }}</p>
+			<p> <b> Average (per day): </b> {{ avg}} </p>
+		{% endif %}
 	{% endfor %}
 {% endblock %}
 
