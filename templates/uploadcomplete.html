@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block body %}
+    <!-- Progress bar -->
 	<div class="row bs-wizard" style="border-bottom:0;">      
       	<div class="col-xs-3 bs-wizard-step complete">
             <div class="text-center bs-wizard-stepnum">Step 1</div>
@@ -32,8 +33,15 @@
             <div class="bs-wizard-info text-center">Finish.</div>
         </div>
     </div>
-
+    <!-- Messages saying upload completed + giving number of logs uploaded/duplicates, new detected HC/public diseases (passed from backed) -->
     <br />
     <br />
-	<p> Upload completed. {{ message }}</p>
+	<p> Upload completed.</p>
+    <p> {{ uploaded_msg }} </p>
+    <p> {{ new_public_msg }} </p>
+    <p> {{ new_hc_msg }} </p>
+    <br />
+    <form enctype="multipart/form-data" method="post" action="/overview">
+        <button type="submit" class="btn btn-default">Back to Dashboard</button>
+    </form>
 {% endblock %}

@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block body %}
+    <!-- progress bar -->
 	<div class="row bs-wizard" style="border-bottom:0;">      
       	<div class="col-xs-3 bs-wizard-step complete">
             <div class="text-center bs-wizard-stepnum">Step 1</div>
@@ -32,11 +33,10 @@
             <div class="bs-wizard-info text-center">Finish.</div>
         </div>
     </div>
-
+    <!-- Text -->
     <br />
     <br />
-
-	<p> The next step is to ensure that the call log is in the proper format for upload. While the copy originally downloaded from Verboice ought to suffice, it is worth the time to ensure that the following columns are included in the log. While the columns need not appear in the same order they are in below, they must have the same spelling and capitalization (note certain typos: "va_neonatal_case"). A template of an uploadable CSV file can be downloaded <a href="/upload?step=template"> here</a>.</p>
+	<p> The next step is to ensure that the call log is in the proper format for upload. While the copy originally downloaded from Verboice ought to suffice, it is worth the time to ensure that the following columns are included in the log. While the columns need not appear in the same order they are in below, they must have the same spelling and capitalization. The dashboard will automatically detect which public and HC diseases are present in a call log, as long as column names follow the conventions listed below. A template of an uploadable CSV file can be downloaded <a href="/upload?step=template"> here</a>.</p>
     <b> General hotline-related columns </b>
     <ul>
         <li> ID </li>
@@ -50,35 +50,16 @@
     <ul>
         <li> hotline_menu </li>
         <li> disease_menu </li>
-        <li> h5n1_menu </li>
-        <li> h5n1_overview_menu </li>
-        <li> h5n1_prevention_menu </li>
-        <li> mers_menu </li>
-        <li> mers_overview_menu </li>
-        <li> mers_prevention_menu </li>
-        <li> zika_menu </li>
-        <li> zika_overview_menu </li>
-        <li> public_report_confirmation </li>
+        <li> A column for each public disease's menu, named as <i> disease</i>_menu </li>
     </ul>
     <b> HC report-related columns </b>
     <ul>
+        <li> level_worker </li>
         <li> cdc_report_started </li>
         <li> cdc_report_ended </li>
-        <li> disease_type </li>
-        <li> var_dairrhea_case </li>
-        <li> var_dairrhea_death </li>
-        <li> var_fever_case </li>
-        <li> var_fever_death </li>
-        <li> var_flaccid_case </li>
-        <li> var_flaccid_death </li>
-        <li> var_diphteria_case </li>
-        <li> var_diphteria_death </li>
-        <li> var_rabies_case </li>
-        <li> var_rabies_death </li>
-        <li> va_neonatal_case </li>
-        <li> var_neonatal_death </li>
+        <li> Two columns for each HC disease, named as var_<i>disease</i>_case and var_<i>disease</i>_death</li>
     </ul>
-
+    <!-- Button to go on to next step -->
     <form enctype="multipart/form-data" method="post" action="/upload?step=3">
         <button type="submit" class="btn btn-default">Next</button>
     </form>

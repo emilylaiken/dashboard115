@@ -59,8 +59,8 @@ function setUpPicker() {
     end = getUrlParameter('dateend');
     end = moment(end);
 
-    $('#reportrange span').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY'));
-    $('#reportrangespan').html(start.format('MMMM D, YYYY') + ' - ' + end.format('MMMM D, YYYY')); 
+    $('#reportrange span').html(start.format('MMM D, YYYY') + ' - ' + end.format('MMM D, YYYY'));
+    $('#reportrangespan').html(start.format('MMM D, YYYY') + ' - ' + end.format('MMM D, YYYY')); 
     
     $('#reportrange').daterangepicker({
         startDate: start,

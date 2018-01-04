@@ -4,9 +4,10 @@
     <head>
         <meta charset="UTF-8" />
         <title>115 Analytics Dashboard</title>
-        <!-- Link in stylesheets: bootstrap and local --> 
+        <!-- Link in stylesheets: bootstrap, font awesome, and custom local --> 
         <link href="http://netdna.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" type="text/css" media="all" href="/static/daterangepicker.css" />
+        <link rel="stylesheet" href="static/font-awesome/css/font-awesome.min.css" type="text/css">
         <!-- WHAT DO THESE DO?? --> 
         {% block extralinks %}{% endblock %} 
     </head>
@@ -26,6 +27,7 @@
                             <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                                 <!-- Left part of navbar: links to pages in dashboard --> 
                                 {% set navigation_bar = [
+                                    ('/settings', 'settings', 'Settings'),
                                     ('/overview', 'overviewlink', 'Overview'),
                                     ('/public', 'publiclink', 'Public Hotline'),
                                     ('/hcreports', 'hcreportslink', 'HC Worker Reports'),
@@ -35,7 +37,11 @@
                                 {% set active_page = active_page|default('overviewlink') -%}
                                 <ul class="nav navbar-nav">
                                     {% for href, id, caption in navigation_bar %}
+                                        {% if id == 'settings' %}
+                                            <li{% if id == active_page %} class="active"{% endif%}><a href="{{ href|e }}" id="{{ id|e }}"><i class="fa fa-gear fa-lg"></i></a></li>
+                                        {% else %}
                                         <li{% if id == active_page %} class="active"{% endif%}><a href="{{ href|e }}" id="{{ id|e }}">{{ caption|e }}</a></li>
+                                        {% endif %}
                                     {% endfor %}
                                 </ul>
                                 <!--{% block navbarleft %}{% endblock %} -->

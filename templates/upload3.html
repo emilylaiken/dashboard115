@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block body %}
+    <!-- progress bar -->
 	<div class="row bs-wizard" style="border-bottom:0;">      
       	<div class="col-xs-3 bs-wizard-step complete">
             <div class="text-center bs-wizard-stepnum">Step 1</div>
@@ -32,11 +33,11 @@
             <div class="bs-wizard-info text-center">Finish.</div>
         </div>
     </div>
-
+    <!-- Text -->
     <br />
     <br />
-
 	<p> Now that the call log is in the correct format, use the button below to upload it to the dashboard. </p>
+    <!-- Button to go to submit upload -->
 	<form enctype="multipart/form-data" method="post" action="/dataload">
 		<input type="file" name="log" id="log">
 		<br />

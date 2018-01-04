@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% set active_page = "settings" %}
+
+{% block body %}
+	<h3> Disease Information - Public Hotline  </h3>
+	<form enctype="multipart/form-data" method="post" action="/settingssubmit">
+		<table class="table" width=100%> 
+			<tr> 
+				<th> View? </th>
+				<th> Disease </th>
+				{% for year in years %}
+					<th> {{ year }} </th>
+				{% endfor %}
+			</tr>
+			<tr> 
+				<td><input type="checkbox" name={{disease}} value={{ disease }} checked></td>
+				<td><input type="text" class="form-control" name={{ "new_disease" }} placeholder="Disease Name"></td>
+				<td><i>Automatically detected</i></td>
+				<td><i>Automatically detected</i></td>
+			</tr>
+			{% for disease, years_dict in diseases.items() %}
+				<tr> 
+					<td><input type="checkbox" name={{disease}} value={{ disease }} checked></td>
+					<td>{{ disease }}</td>
+					{% for year, months in years_dict.items() %} 
+						<td>{{ months }}</td>
+					{% endfor %}
+				</tr>
+			{% endfor %}
+		</table>
+		<a href="/editsettings"><i class="fa fa-plus-circle"></i> Add a new disease </a>
+		<br />
+		<br />
+        <button type="submit" class="btn btn-default">Submit</button>
+    </form>
+{% endblock %}
+
+

@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block body %}
+    <!-- progress bar -->
 	<div class="row bs-wizard" style="border-bottom:0;">      
       	<div class="col-xs-3 bs-wizard-step active">
             <div class="text-center bs-wizard-stepnum">Step 1</div>
@@ -32,10 +33,9 @@
             <div class="bs-wizard-info text-center">Finish.</div>
         </div>
     </div>
-
+    <!-- Text -->
     <br />
     <br />
-
 	<p>Follow these steps to download the call log from Verboice: </p>
     <ol>
         <li> Login </li>
@@ -48,6 +48,7 @@
         <li> Select "Download CSV" </li>
         <li> Select "No, Only CSV" </li>
     </ol>
+    <!-- Button to go on to the next step -->
 	<form enctype="multipart/form-data" method="post" action="/upload?step=2">
   		<button type="submit" class="btn btn-default">Next</button>
   	</form>

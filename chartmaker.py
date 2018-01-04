@@ -1,8 +1,9 @@
 import plotly
 import plotly.plotly as py
 import plotly.graph_objs as go
+import helpers
 
-
+# Calls by type pie chart: HC workers vs. public--ONLINE
 def calls_by_type(hc_workers, public):
     figure = {
         "data": [
@@ -26,17 +27,27 @@ def calls_by_type(hc_workers, public):
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
-def calls_by_day_offline(dates, call_totals, thetitle, fname):
-    py.sign_in('emilylaiken', 'csrDX5SAFtnDVouV2f18') # Replace the username, and API key with your credentials.
+# Pie charts for download--used for summary pie chart for entire hotline (calls by type) and summary pie chart for public hotline--OFFLINE
+def pie_offline(values, labels, fname, title):
+    py.sign_in('emilylaiken', 'csrDX5SAFtnDVouV2f18') 
+    trace = go.Pie(labels=labels, values=values, textinfo='value')
+    layout = go.Layout(title=title, width=800, height=640)
+    fig = go.Figure(data=[trace], layout=layout)
+    py.image.save_as(fig, filename=fname)
+    return
+
+# Single-series by day (used for total calls, calls requesting more info, etc.)--OFFLINE
+def calls_by_day_offline(dates, call_totals, thetitle, fname, daterange):
+    py.sign_in('emilylaiken', 'csrDX5SAFtnDVouV2f18') 
     trace = go.Scatter(x=dates, y= call_totals)
     data = [trace]
-    layout = go.Layout(title=thetitle, width=800, height=640)
+    layout = go.Layout(title=thetitle, width=800, height=640, xaxis={'range': daterange})
     fig = go.Figure(data=data, layout=layout)
     py.image.save_as(fig, filename=fname)
     return 
 
-
-def calls_by_day(dates, call_totals, title):
+# Single-series by day (used for total calls, calls requesting more info, etc.)--ONLINE
+def calls_by_day(dates, call_totals, title, daterange):
     figure = {
         "data": [{
             'x': dates,
@@ -44,49 +55,40 @@ def calls_by_day(dates, call_totals, title):
         }],
         "layout": {
             "title": title,
-            "showlegend": False
+            "showlegend": False,
+            "xaxis": {'range': daterange}
         }
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False, image='jpeg', image_filename='test')
 
-def menu_visits_by_day(dates, h5n1, mers, zika):
-    figure = {
-        "data": [
-            {'x': dates, 'y': h5n1, 'name': "H5N1"},
-            {'x': dates, 'y': mers, 'name': "Mers"},
-            {'x': dates, 'y': zika, 'name': "Zika"}
-        ],
-        "layout": {
-            "title": "Visits to Each Public Disease Menu by Day",
-            "showlegend": True,
-
-        }
-    }
-    return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
-
-def overview_and_prevention_by_day_download(dates, overview, prevention, title, fname):
+# Multi-series by day (used for overview/prevention charts for public hotine)--OFFLINE
+def overview_and_prevention_by_day_download(dates, overview, prevention, all, title, fname, daterange):
     py.sign_in('emilylaiken', 'csrDX5SAFtnDVouV2f18') # Replace the username, and API key with your credentials.
     trace1 = go.Scatter(x=dates, y= overview, name='Overview information')
     trace2 = go.Scatter(x=dates, y=prevention, name='Prevention information')
-    data = [trace1, trace2]
-    layout = go.Layout(title="Visits to Prevention/Overview Information by Day - " + title, width=800, height=640)
+    trace3 = go.Scatter(x=dates, y=all, name='All Visits')
+    data = [trace1, trace2, trace3]
+    layout = go.Layout(title="Visits to Prevention/Overview Information by Day - " + title, width=800, height=640, xaxis={'range': daterange})
     fig = go.Figure(data=data, layout=layout)
     py.image.save_as(fig, filename=fname)
 
-def overview_and_prevention_by_day(dates, overview, prevention, title):
+# Multi-series by day (used for overview/prevention charts for public hotine)--ONLINE
+def overview_and_prevention_by_day(dates, all, overview, prevention, title, daterange):
     figure = {
         "data": [
             {'x': dates, 'y': overview, 'name': "Overview Information"},
             {'x': dates, 'y': prevention, 'name': "Prevention Information"},
+            {'x': dates, 'y': all, 'name': "Total Visits"}
         ],
         "layout": {
             "title": "Visits to Prevention/Overview Information by Day - " + title,
             "showlegend": True,
-
+            "xaxis": {'range': daterange}
         }
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
+# Two subplots: 1) call-by-status pie for HC workers, 2) call-by-status pie for public (used on Overview page)--ONLINE
 def calls_by_status(labels, data_public, data_hc, title):
     figure = {
     'data': [
@@ -141,7 +143,7 @@ def calls_by_status(labels, data_public, data_hc, title):
 
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
-
+# Double-series by week, only for completed vs. attempted calls by HC workers--ONLINE, NOT CURRENTLY IN USE
 def reports_by_week(dates, completed, attempted, title):
     figure = {
         "data": [
@@ -151,29 +153,20 @@ def reports_by_week(dates, completed, attempted, title):
         "layout": {
             "title": title,
             "showlegend": True,
-
         }
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
-def case_reports_by_week(dates, series, title):
+# Double-series by week: reports by week for HC workers, divided into two series (completed vs. attempted, on-time vs. late, etc.)--ONLINE
+def case_reports_by_week(diseases, dates, series, title):
+    data = []
+    for i in range (0, len(diseases)):
+        data.append({'x': dates, 'y': series[i], 'name': str.title(diseases[i].split("_")[1] + " " + diseases[i].split("_")[2] + "s")})
     figure = {
-        "data": [
-            {'x': dates, 'y': series[0], 'name': "Diarrhea"},
-            {'x': dates, 'y': series[1], 'name': "Fever"},
-            {'x': dates, 'y': series[2], 'name': "Flaccid"},
-            {'x': dates, 'y': series[3], 'name': "Respiratory"},
-            {'x': dates, 'y': series[4], 'name': "Dengue"},
-            {'x': dates, 'y': series[5], 'name': "Meningitis"},
-            {'x': dates, 'y': series[6], 'name': "Jaundice"},
-            {'x': dates, 'y': series[7], 'name': "Diphteria"},
-            {'x': dates, 'y': series[8], 'name': "Rabies"},
-            {'x': dates, 'y': series[9], 'name': "Neonatal"}
-        ],
+        "data": data,
         "layout": {
             "title": title,
             "showlegend": True,
-
         }
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)

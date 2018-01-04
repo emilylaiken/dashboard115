@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block body %}
+    <!-- progress bar -->
 	<div class="row bs-wizard" style="border-bottom:0;">      
       	<div class="col-xs-3 bs-wizard-step complete">
             <div class="text-center bs-wizard-stepnum">Step 1</div>
@@ -32,11 +33,12 @@
             <div class="bs-wizard-info text-center">Finish.</div>
         </div>
     </div>
-
+    <!-- Message explaining why the upload failed (passed from back-end) -->
     <br />
     <br />
 	<p> Upload failed. {{ message }} </p>
 	<br />
+    <!-- Button to return to upload -->
 	<form enctype="multipart/form-data" method="post" action="/upload?step=3">
   		<button type="submit" class="btn btn-default">Back to Upload</button>
   	</form>

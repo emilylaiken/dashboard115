@@ -3,6 +3,8 @@ import sys
 import csv
 import sqlite3
 import datetime
+import helpers
+import json
 
 # Checks if the uploaded file is a CSV
 def allowed_file(filename):
@@ -41,26 +43,71 @@ def parseDateTime(fulldate):
 # Given the CSV file name, loads the call logs into memory (if they are not duplicates of previously loaded logs)
 def loadData(data_file_name):
     # Check that all required variables are present
-    req_attributes = ['ID', 'Started', 'level_worker', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'h5n1_menu', 'h5n1_overview_menu',
-    'h5n1_prevention_menu', 'mers_menu', 'mers_overview_menu', 'mers_prevention_menu', 'zika_menu', 'zika_overview_menu', 'public_report_confirmation', 
-    'cdc_report_started', 'cdc_report_ended', 'disease_type', 'var_dairrhea_case', 'var_dairrhea_death', 'var_fever_case', 'var_fever_death', 'var_flaccid_case', 
-    'var_flaccid_death', 'var_diphteria_case', 'var_diphteria_death', 'var_rabies_case', 'var_rabies_death', 'va_neonatal_case', 'var_neonatal_death']
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS calls (call_id integer primary key, date varchar, time time, week_id varchar, duration integer, caller_id integer, status varchar, type varchar);")
-    cur.execute("CREATE TABLE IF NOT EXISTS hc_reports (call_id integer primary key, level_worker integer, completed varchar, disease_type integer, diarrhea_cases integer, diarrhea_deaths integer, fever_cases integer, fever_deaths integer, flaccid_cases integer, flaccid_deaths integer, respiratory_cases integer, respiratory_deaths integer, dengue_cases integer, dengue_deaths integer, meningitis_cases integer, meningitis_deaths integer, jaundice_cases integer, jaundice_deaths integer, diphteria_cases integer, diphteria_deaths integer, rabies_cases integer, rabies_deaths integer, neonatal_cases integer, neonatal_deaths integer);")
-    cur.execute("CREATE TABLE IF NOT EXISTS  public_interactions (call_id integer primarykey, hotline_menu integer, disease_menu integer, h5n1_menu integer, h5n1_overview_menu integer, h5n1_prevention_menu integer, mers_menu integer, mers_overview_menu integer, mers_prevention_menu integer, zika_menu integer, zika_overview_menu integer, zika_prevention_menu integer, public_report_confirmation integer);")
-    numInserted = 0
-    numDuplicates = 0
+    calls_attributes = ['call_id', 'date', 'datenum', 'month', 'year', 'time', 'week_id', 'duration', 'caller_id', 'status', 'type']
+    calls_attributes_types = {'call_id':'integer primary key', 'date':'varchar', 'datenum': 'integer', 'month': 'varchar', 'year':'varchar', 'time':'time', 'week_id':'varchar', 'duration':'integer', 'caller_id':'integer', 
+                        'status':'varchar', 'type':'varchar'}
+    req_attributes = ['ID', 'Started', 'Caller interaction', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'level_worker', 'cdc_report_started', 'cdc_report_ended']
+    # REFRESH
+    #cur.execute("DROP TABLE calls;")
+    #cur.execute("DROP TABLE hc_reports;")
+    #cur.execute("DROP TABLE public_interactions;")
+    #helpers.setDiseases([], [], [], [])
     with open(data_file_name, 'rU') as fin: # In-file is rawcalls.csv
         dr = csv.DictReader(fin) # First line is used as column headers by default
         for req_attribute in req_attributes:
             if req_attribute not in dr.fieldnames:
-                print(req_attribute, file=sys.stderr)
-                return "Missing attribute: " + req_attribute
+                return "Missing attribute: " + req_attribute, "", ""
+        # Record which diseases are available, add to records if there are new ones
+        hc_fields_available = []
+        public_fields_available = []
+        other_public_fields = ['welcome', 'hotline', 'disease', 'nchad']
+        for field in dr.fieldnames:
+            # Search for HC worker diseases--begin with 'va' and end with 'case' or 'death'
+            if (field[-4:] == 'case' or field[-5:] == 'death') and field[:2] == 'va':
+                hc_fields_available.append(field)
+            # Search for public diseases--end with 'menu'
+            elif field[-4:] == 'menu' and not field.split("_")[0] in other_public_fields and not field.split("_")[0] in public_fields_available:
+                public_fields_available.append(field.split("_")[0])
+        # Add new records to settings JSON
+        all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
+        new_public_diseases = [disease for disease in public_fields_available if disease not in all_public]
+        new_hc_diseases = [disease for disease in hc_fields_available if disease not in all_hc]
+        # Define attributes for each table
+        hc_attributes = ['call_id', 'completed'] + hc_fields_available
+        hc_attributes_types = {}
+        for atr in hc_attributes:
+            if atr == 'call_id':
+                hc_attributes_types[atr] = 'integer primary key'
+            elif atr == 'completed':
+                hc_attributes_types[atr] = 'varchar'
+            else:
+                hc_attributes_types[atr] = 'integer'
+        public_attributes = {'call_id':'integer primary key', 'hotline_menu':'integer', 'disease_menu':'integer'}
+        for disease in public_fields_available:
+            public_attributes[disease + '_menu'] = 'integer'
+        # Create tables if needed, alter if new disease has been added
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='calls';")
+        tables = cur.fetchall()
+        cur.execute("CREATE TABLE IF NOT EXISTS calls (" + ", ".join([atr + " " + calls_attributes_types[atr] for atr in calls_attributes]) + ");")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_date ON calls (datenum);")
+        cur.execute("CREATE TABLE IF NOT EXISTS hc_reports (" + ", ".join([key + " " + value for key, value in hc_attributes_types.iteritems()]) + ");")
+        cur.execute("CREATE TABLE IF NOT EXISTS public_interactions (" + ", ".join([key + " " + value for key, value in public_attributes.iteritems()]) + ");")
+        # Insert columns if there are any new diseases
+        for disease in new_public_diseases:
+            if tables != []:
+                cur.execute("ALTER TABLE public_interactions ADD " + disease + "_menu integer;")
+            all_public, chosen_public, all_hc, chosen_hc = helpers.setDiseases(all_public + [disease], chosen_public + [disease], all_hc, chosen_hc)
+        for disease in new_hc_diseases:
+            if tables != []:
+                cur.execute("ALTER TABLE hc_reports ADD " + disease + " integer;")
+            all_public, chosen_public, all_hc, chosen_hc = helpers.setDiseases(all_public, chosen_public, all_hc + [disease], chosen_hc + [disease])
+        numInserted = 0
+        numDuplicates = 0
+        # Read in calls
         prev_date = ""
         week_id = ""
-        day_counter = 7
         for call in dr:
             # Record general info--call ID, date, time, caller ID, status, level of worker, and cdc report confirmations
             if call['ID'] == "": # If we are passed the end of the call records, stop
@@ -68,24 +115,27 @@ def loadData(data_file_name):
             cur.execute("SELECT * FROM calls WHERE call_id = " + "'" + call['ID'] + "'");
             duplicate_calls = cur.fetchall()
             if len(duplicate_calls) == 0:
+                # Get time and date from 'started' field
                 dateTime = parseDateTime(call['Started'])
                 date = dateTime[0]
                 time = dateTime[1]
+                # Calculate week ID (for grouping by weeks)
                 day_of_week = datetime.datetime.strptime(date, '%Y-%m-%d').weekday()
                 if not prev_date == date and day_of_week == 2:
                     week_id = "Week of " + datetime.datetime.strftime(datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=7), '%y-%m-%d')
                 prev_date = date
+                datenum = helpers.dtoi(date)
+                # Decide which type of call it is--HC worker or public
                 call_type = 'public'
                 if (call['level_worker'] == '2'):
                     call_type = 'hc_worker'
-                general_info = [(call['ID'], date, time, week_id, call['Duration(second)'], removeAnonymous(call['Caller ID']), call['Status'], call_type)]
-                cur.executemany("INSERT INTO calls (call_id, date, time, week_id, duration, caller_id, status, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?);", general_info)
+                general_info = [(call['ID'], date, datenum, datenum[4:6], datenum[0:4], time, week_id, call['Duration(second)'], removeAnonymous(call['Caller ID']), call['Status'], call_type)]
+                cur.executemany("INSERT INTO calls (" +  ", ".join(calls_attributes) + ") VALUES (" + ", ".join(["?" for atr in calls_attributes]) + ");", general_info)
                 # Record disease report information--disease type and disease # inputs
                 if (call_type == "hc_worker"):
-                    report_vars = ('var_dairrhea_case', 'var_dairrhea_death', 'var_fever_case', 'var_fever_death', 'var_flaccid_case', 'var_flaccid_death', 'var_respiratory_case', 'var_respiratory_death', 'var_dengue_case', 'var_dengue_death', 'var_meningetis_case', 'var_meningitis_death', 'var_juandice_case', 'var_juandice_death', 'var_diphteria_case', 'var_diphteria_death', 'var_rabies_case', 'var_rabies_death', 'va_neonatal_case', 'var_neonatal_death')
-                    reports = (call['disease_type'],)
+                    reports = ()
                     report_something = "false"
-                    for var in report_vars:
+                    for var in hc_fields_available:
                         if call[var] == "": # Did not enter any of this disease
                             reports = reports + (0,)
                         else: # Some of disease reported
@@ -95,10 +145,10 @@ def loadData(data_file_name):
                     if ((call['cdc_report_started'] == '1' and call['cdc_report_ended'] == '1') or (call['cdc_report_started'] != '1' and report_something == "true")):
                         completed = "true"
                     to_db = [(call['ID'], completed) + reports]
-                    cur.executemany("INSERT INTO hc_reports (call_id, completed, disease_type, diarrhea_cases, diarrhea_deaths, fever_cases, fever_deaths, flaccid_cases, flaccid_deaths, respiratory_cases, respiratory_deaths, dengue_cases, dengue_deaths, meningitis_cases, meningitis_deaths, jaundice_cases, jaundice_deaths, diphteria_cases, diphteria_deaths, rabies_cases, rabies_deaths, neonatal_cases, neonatal_deaths) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", to_db)
+                    cur.executemany("INSERT INTO hc_reports (" + ", ".join(hc_attributes) + ") VALUES (" + ", ".join(["?" for atr in hc_attributes]) + ");", to_db)
                     # Record public interaction with menus
                 else:
-                    disease_menus = ('hotline_menu', 'disease_menu', 'h5n1_menu', 'h5n1_overview_menu', 'h5n1_prevention_menu', 'mers_menu', 'mers_overview_menu', 'mers_prevention_menu', 'zika_menu', 'zika_overview_menu', 'zika_prevention_menu', 'public_report_confirmation')
+                    disease_menus = ['hotline_menu', 'disease_menu'] + [disease + "_menu" for disease in public_fields_available]
                     interaction = ()
                     for menu in disease_menus:
                         if call[menu] == "":
@@ -106,10 +156,23 @@ def loadData(data_file_name):
                         else:
                             interaction = interaction + (call[menu],)
                     to_db = [(call['ID'],) + interaction]
-                    cur.executemany("INSERT INTO public_interactions (call_id, hotline_menu, disease_menu, h5n1_menu, h5n1_overview_menu, h5n1_prevention_menu, mers_menu, mers_overview_menu, mers_prevention_menu, zika_menu, zika_overview_menu, zika_prevention_menu, public_report_confirmation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", to_db)
+                    cur.executemany("INSERT INTO public_interactions (call_id, " + ", ".join(disease_menus) + ") VALUES (" + ", ".join(["?" for i in range (0, len(disease_menus) + 1)]) + ");", to_db)
                 numInserted = numInserted + 1
             else:
                 numDuplicates = numDuplicates + 1
     con.commit()
     con.close()
-    return "Number of call logs successfully loaded: " + str(numInserted) + ". Number of duplicates (not loaded): " + str(numDuplicates) + "."
+    # Messages to print on HTML template: number of calls inserted/duplicates, new public diseases detected, new HC diseases detected
+    num_loaded_msg = "Number of call logs successfully loaded: " + str(numInserted) + ". Number of duplicates (not loaded): " + str(numDuplicates)+ "."
+    new_public_msg = ""
+    if len(new_public_diseases) == 0:
+        new_public_msg = "New public diseases detected: None."
+    else:
+        new_public_msg = "New public diseases detected: " + str.title(", ".join(new_public_diseases)) + "."
+    new_hc_msg = ""
+    if len(new_hc_diseases) == 0:
+        new_hc_msg = "New HC diseases detected: None."
+    else:
+        hc_disease_titles = [str.title(disease.split('_')[1] + " " + disease.split('_')[2]) for disease in new_hc_diseases]
+        new_hc_msg = "New public diseases detected: " + str.title(", ".join(hc_disease_titles)) + "."
+    return num_loaded_msg, new_public_msg, new_hc_msg

@@ -2,15 +2,18 @@ from __future__ import print_function
 import os
 import sqlite3
 import datetime
-from flask import Flask, redirect, render_template, request, url_for, send_file, session
+from flask import Flask, redirect, render_template, request, url_for, send_file, session, Response
 import sys
 from werkzeug import secure_filename
 from threading import Thread
-import chartmaker
 import graph_helpers as ghelpers
 import download_helpers as dhelpers
 import upload_helpers as uhelpers
 import helpers
+import calendar
+import datetime
+import collections
+import time
 
 
 #App configurations--set folders and allowed extensions for file uploads
@@ -22,6 +25,8 @@ app.config['SESSION_TYPE'] = 'filesystem'
 ############ LOGIN PAGES ###########
 @app.route("/", methods=["GET", "POST"])
 def index():
+    # REFRESH
+    #helpers.editLogin('cdc', 'cdc')
     if request.method=="POST":
         # Extract correct username and password--if none have been set, default is "cdc" and "cdc"
         username, pwd = helpers.getCorrectLogin()
@@ -44,19 +49,40 @@ def changelogin():
         elif request.form.get('oldusername') != username or request.form.get('oldpwd') != pwd:
             return render_template('wronglogin.html')
         else:
-            con = sqlite3.connect("logs115.db")
-            cur = con.cursor()
-            cur.execute("DELETE FROM login")
-            cur.executemany("INSERT INTO login (username, pwd) VALUES (?, ?);", [(request.form.get('newusername'), request.form.get('newpwd'))])
-            con.commit()
-            con.close()
+            helpers.editLogin(request.form.get('newusername'), request.form.get('newpwd'))
             return redirect('/')
     else:
         return render_template('changelogin.html')
 
+@app.route("/loadingmemory", methods=["GET", "POST"])
+def loadingmemory():
+    if request.method == 'GET':
+        return render_template('loadingmemory.html')
+    if request.method == 'POST':
+        print('loading in from memory')
+        memory_db = sqlite3.connect('logs::memory:?cache=shared')
+        cur = memory_db.cursor()
+        # Refresh
+        cur.execute("DROP TABLE calls")
+        cur.execute("DROP TABLE public_interactions")
+        cur.execute("DROP TABLE hc_reports")
+        cur.execute("DROP TABLE login")
+        cur.execute("DROP TABLE schemas")
+        disc_db = sqlite3.connect('logs115.db')
+        #df = pd.read_sql_query("select * from calls limit 5;", conn)
+        #print(df)
+        query = "".join(line for line in disc_db.iterdump())
+        memory_db.executescript(query)
+        cur.execute("SELECT COUNT(*) FROM calls;")
+        result = cur.fetchall()
+        print(result[0][0])
+        disc_db.close()
+        memory_db.close()
+        return 'done'
+
 
 ########## DASHBOARD PAGES: OVERVIEW, PUBLIC, AND HC REPORTS ##########
-@app.route('/overview', methods=["GET"])
+@app.route('/overview', methods=["GET", "POST"])
 def overview():  
     # Check for log-in
     if not session.get('logged_in'):
@@ -83,10 +109,11 @@ def public():
     if helpers.argsMissing():
         return redirect(helpers.redirectWithArgs('/public'))
     # Create figures
+    _, public_diseases, _, _ = helpers.getDiseases()
     charts, totals, averages = [], [], []
     charts, totals, averages = ghelpers.addFigure(condition_string=" type='public' ", table='all', title="Calls to Public Hotline by Day", charts=charts, totals=totals, averages=averages)
-    charts, totals, averages = ghelpers.addDiseaseFigures(["h5n1", "mers", "zika"], charts, totals, averages)
-    charts, totals, averages = ghelpers.addFigure(condition_string="public_report_confirmation='0'", table="public", title="Public Disease Reports by Day", charts=charts, totals=totals, averages=averages)
+    charts, totals, averages = ghelpers.addDiseaseFigures(sorted(public_diseases), charts, totals, averages)
+    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='2'", table="public", title="Public Disease Reports by Day", charts=charts, totals=totals, averages=averages)
     charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='3'", table="public", title="Calls Requesting Additional Information by Day", charts=charts, totals=totals, averages=averages)
     charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='4'", table="public", title="Calls Requesting Ambulance Information by Day", charts=charts, totals=totals, averages=averages)
     return render_template("public.html", figures=zip(charts, totals, averages))
@@ -99,12 +126,14 @@ def hcreports():
     # Check for all necessary parameters
     if helpers.timeArgsMissing():
         return redirect(helpers.redirectWithArgs('/hcreports'))
+    starting_date_string = request.args.get('datestart')
+    ending_date_string = request.args.get('dateend')
     # Create figures
     charts = []
+    _, _, _, hc_diseases = helpers.getDiseases()
     charts.append(ghelpers.addOnTimeChart('calls JOIN hc_reports ON calls.call_id = hc_reports.call_id', "HC Reports by Week (On-Time vs Late)"))
-    diseases = ['diarrhea', 'fever', 'flaccid', 'respiratory', 'dengue', 'meningitis', 'jaundice', 'diphteria', 'rabies', 'neonatal']
-    charts.append(ghelpers.addHCReportChart([disease + '_cases' for disease in diseases], "Reports of Disease Cases by Week"))
-    charts.append(ghelpers.addHCReportChart([disease + '_deaths' for disease in diseases], "Reports of Disease Deaths by Week"))
+    charts.append(ghelpers.addHCReportChart([disease for disease in sorted(hc_diseases) if 'case' in disease], "Reports of Disease Cases by Week"))
+    charts.append(ghelpers.addHCReportChart([disease for disease in sorted(hc_diseases) if 'death' in disease], "Reports of Disease Deaths by Week"))
     return render_template("hcreports.html", charts=charts)
 
 ########## DOWNLOADABLE REPORTS ##########
@@ -175,14 +204,83 @@ def dataload():
         filename = secure_filename(csv.filename)
         csv.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         # Upload data from the saved file to the dashboard
-        uploaded = uhelpers.loadData("uploads/" + filename)
-        if uploaded[0] != 'N':
-            return render_template("uploadfail.html", message=uploaded)
+        uploaded_msg, new_public_msg, new_hc_msg = uhelpers.loadData("uploads/" + filename)
+        if uploaded_msg[0] != 'N':
+            return render_template("uploadfail.html", message=uploaded_msg)
     else:
-        return render_template("uploadfail.html", 'Unknown reason.')
-    return render_template("uploadcomplete.html", message=uploaded)
+        return render_template("uploadfail.html", message='Unknown reason.')
+    return render_template("uploadcomplete.html", uploaded_msg=uploaded_msg, new_public_msg=new_public_msg, new_hc_msg=new_hc_msg)
 
+
+############# SCHEMAS ################
+@app.route("/settings", methods=["GET", "POST"])
+def settings():
+    # Check for log-in
+    if not session.get('logged_in'):
+        return redirect(url_for('index'))
+    disease_presences = []
+    # Get list of years from 2016 to present
+    checked = {}
+    years = []
+    now = datetime.datetime.now()
+    for year in range (2016, now.year + 1):
+        years = [year] + years
+    # Get disease ptions and selected diseases
+    all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
+    con = sqlite3.connect('logs115.db')
+    cur = con.cursor()
+    month_names = {1:'January', 2:'February', 3:'March', 4:'April', 5:'May', 6:'June', 7:'July', 8:'August', 9:'September', 10:'October', 11:'November', 12:'December'}
+    # For each public disease, determine whether it was used in each month from 2016 to present
+    for disease in sorted(all_public):
+        disease_lst = [disease]
+        menu_string = disease + "_menu"
+        for year in years:
+            year_str = []
+            cur.execute("SELECT DISTINCT month FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE year = " + str(year) + " AND " + menu_string + " IS NOT NULL;")
+            months = cur.fetchall()
+            months = ", ".join([month_names[int(month[0])] for month in months])
+            disease_lst.append(months)
+        # If disease is currently marked as to-be-viewed, mark it to be checked in the HTML template
+        if disease in chosen_public:
+            checked[disease] = 1
+        else:
+            checked[disease] = 0
+        disease_presences.append(disease_lst)
+    # For each HC disease, determine whether it was used in each month from 2016 to present
+    hc_disease_presences = []
+    hc_checked = {}
+    for disease in sorted(all_hc):
+        disease_lst = [disease, disease.split("_")[1] + " " + disease.split("_")[2]]
+        for year in years:
+            year_str = []
+            cur.execute("SELECT DISTINCT month FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE year = " + str(year) + " AND " + disease + " IS NOT NULL;")
+            months = cur.fetchall()
+            months = ", ".join([month_names[int(month[0])] for month in months])
+            disease_lst.append(months)
+        # If disease is currently marked as to-be-viewed, mark it to be checked in the HTML template
+        if disease in chosen_hc:
+            hc_checked[disease] = 1
+        else:
+            hc_checked[disease] = 0
+        hc_disease_presences.append(disease_lst)
+    print('here')
+    #con.commit()
+    con.close()
+    return render_template("settings.html", diseases=disease_presences, checked=checked, years=years, hc_diseases=hc_disease_presences, hc_checked=hc_checked)
+
+@app.route("/editsettings", methods=["GET", "POST"])
+def editsettings():
+    # Check for log-in
+    if not session.get('logged_in'):
+        return redirect(url_for('index'))
+    # Get former disease settings
+    all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
+    # Set the disease settings according to what was inputted in the HTML form
+    helpers.setDiseases(all_public, [key for key in request.form if not ('case' in key or 'death' in key)], all_hc, [key for key in request.form if ('case' in key or 'death' in key)])
+    return redirect(url_for('overview'))
+    
 # Run application
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+    app.jinja_env.filters['capitalize'] = helpers.capitalize #Jinja environment filter to capitalize a string
     app.run(host='0.0.0.0', port=port, debug=False)
