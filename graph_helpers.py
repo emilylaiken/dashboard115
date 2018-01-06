@@ -127,8 +127,7 @@ def addDiseaseFigures(diseases, charts, totals, averages):
         disease_chart = chartmaker.overview_and_prevention_by_day(dates, all, overview, prevention, str.title(diseases[i]) + title_addon, [starting_date_string, ending_date_string])
         charts.append(disease_chart)
         #Total visits to menu
-        total_sql = "SELECT count(calls.call_id) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE datenum >=" + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + " AND " + menu_string + " IS NOT NULL;"
-        cur.execute(total_sql)
+        cur.execute(total_sql_all)
         total = cur.fetchall()
         totals.append(total[0][0])
         #Average visits to menu
@@ -143,18 +142,12 @@ def addHCReportChart(condition_strings, title):
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
     series = []
-    print('before queries')
-    print(datetime.datetime.now())
     for condition_string in condition_strings:
         cur.execute("SELECT week_id, sum(" + condition_string + ") FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + " GROUP BY week_id;")
         series.append(cur.fetchall())
-    print('after queries')
-    print(datetime.datetime.now())
     dates = column(series[1], 0)
     series = [column(serie, 1) for serie in series]
     con.close()
-    print('done')
-    print(datetime.datetime.now())
     return chartmaker.case_reports_by_week(condition_strings, dates, series, title)
 
 # Adds multi-series completed vs. attempted figure to the page's list of figures
