@@ -9,6 +9,7 @@ from threading import Thread
 import graph_helpers as ghelpers
 import download_helpers as dhelpers
 import upload_helpers as uhelpers
+import settings_helpers as shelpers
 import helpers
 import calendar
 import datetime
@@ -90,14 +91,19 @@ def overview():
     # Check for all necessary parameters
     if helpers.argsMissing():
         return redirect(helpers.redirectWithArgs('/overview'))
+    # Open database
+    con = sqlite3.connect('logs115.db')
+    cur = con.cursor()
     # Parse duration and dates from URL parameters
     duration_string, title_addon = ghelpers.parseDuration(request.args.get('durationstart'), request.args.get('durationend'))
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
     # Create figures
     charts, totals, averages = [], [], []
-    charts, totals, averages = ghelpers.addFigure(condition_string = "call_id != ''", table='all', title="Calls to Entire Hotline by Day", charts=charts, totals=totals, averages=averages)
-    charts, totals, averages = ghelpers.addCompletedAttemptedChart(charts, totals, averages)
+    charts, totals, averages = ghelpers.addFigure(condition_string = "call_id != ''", table='all', title="Calls to Entire Hotline by Day", charts=charts, totals=totals, averages=averages, cur=cur)
+    charts, totals, averages = ghelpers.addCompletedAttemptedChart(charts, totals, averages, cur)
+    # Close database
+    con.close()
     return render_template("overview.html", figures = zip(charts, totals, averages))
 
 @app.route("/public", methods=["GET", "POST"])
@@ -108,15 +114,21 @@ def public():
     # Check for all necessary parameters
     if helpers.argsMissing():
         return redirect(helpers.redirectWithArgs('/public'))
+    # Open database
+    con = sqlite3.connect('logs115.db')
+    cur = con.cursor()
     # Create figures
     _, public_diseases, _, _ = helpers.getDiseases()
     charts, totals, averages = [], [], []
-    charts, totals, averages = ghelpers.addFigure(condition_string=" type='public' ", table='all', title="Calls to Public Hotline by Day", charts=charts, totals=totals, averages=averages)
-    charts, totals, averages = ghelpers.addDiseaseFigures(sorted(public_diseases), charts, totals, averages)
-    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='2'", table="public", title="Public Disease Reports by Day", charts=charts, totals=totals, averages=averages)
-    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='3'", table="public", title="Calls Requesting Additional Information by Day", charts=charts, totals=totals, averages=averages)
-    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='4'", table="public", title="Calls Requesting Ambulance Information by Day", charts=charts, totals=totals, averages=averages)
+    charts, totals, averages = ghelpers.addFigure(condition_string=" type='public' ", table='all', title="Calls to Public Hotline by Day", charts=charts, totals=totals, averages=averages, cur=cur)
+    charts, totals, averages = ghelpers.addDiseaseFigures(sorted(public_diseases), charts, totals, averages, cur)
+    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='2'", table="public", title="Public Disease Reports by Day", charts=charts, totals=totals, averages=averages, cur=cur)
+    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='3'", table="public", title="Calls Requesting Additional Information by Day", charts=charts, totals=totals, averages=averages, cur=cur)
+    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='4'", table="public", title="Calls Requesting Ambulance Information by Day", charts=charts, totals=totals, averages=averages, cur=cur)
+    # Close database
+    con.close()
     return render_template("public.html", figures=zip(charts, totals, averages))
+
 
 @app.route("/hcreports", methods=["GET", "POST"])
 def hcreports():
@@ -126,14 +138,20 @@ def hcreports():
     # Check for all necessary parameters
     if helpers.timeArgsMissing():
         return redirect(helpers.redirectWithArgs('/hcreports'))
+    # Open database
+    con = sqlite3.connect('logs115.db')
+    cur = con.cursor()
+    # Parse URL parameters
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
     # Create figures
     charts = []
     _, _, _, hc_diseases = helpers.getDiseases()
-    charts.append(ghelpers.addOnTimeChart('calls JOIN hc_reports ON calls.call_id = hc_reports.call_id', "HC Reports by Week (On-Time vs Late)"))
-    charts.append(ghelpers.addHCReportChart([disease for disease in sorted(hc_diseases) if 'case' in disease], "Reports of Disease Cases by Week"))
-    charts.append(ghelpers.addHCReportChart([disease for disease in sorted(hc_diseases) if 'death' in disease], "Reports of Disease Deaths by Week"))
+    charts.append(ghelpers.addOnTimeChart('calls JOIN hc_reports ON calls.call_id = hc_reports.call_id', "HC Reports by Week (On-Time vs Late)", cur))
+    charts.append(ghelpers.addHCReportChart([disease for disease in sorted(hc_diseases) if 'case' in disease], "Reports of Disease Cases by Week", cur))
+    charts.append(ghelpers.addHCReportChart([disease for disease in sorted(hc_diseases) if 'death' in disease], "Reports of Disease Deaths by Week", cur))
+    # Close database
+    con.close()
     return render_template("hcreports.html", charts=charts)
 
 ########## DOWNLOADABLE REPORTS ##########
@@ -212,15 +230,13 @@ def dataload():
     return render_template("uploadcomplete.html", uploaded_msg=uploaded_msg, new_public_msg=new_public_msg, new_hc_msg=new_hc_msg)
 
 
-############# SCHEMAS ################
+############# SETTINGS ################
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
     # Check for log-in
     if not session.get('logged_in'):
         return redirect(url_for('index'))
-    disease_presences = []
     # Get list of years from 2016 to present
-    checked = {}
     years = []
     now = datetime.datetime.now()
     for year in range (2016, now.year + 1):
@@ -229,42 +245,10 @@ def settings():
     all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
-    month_names = {1:'January', 2:'February', 3:'March', 4:'April', 5:'May', 6:'June', 7:'July', 8:'August', 9:'September', 10:'October', 11:'November', 12:'December'}
     # For each public disease, determine whether it was used in each month from 2016 to present
-    for disease in sorted(all_public):
-        disease_lst = [disease]
-        menu_string = disease + "_menu"
-        for year in years:
-            year_str = []
-            cur.execute("SELECT DISTINCT month FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE year = " + str(year) + " AND " + menu_string + " IS NOT NULL;")
-            months = cur.fetchall()
-            months = ", ".join([month_names[int(month[0])] for month in months])
-            disease_lst.append(months)
-        # If disease is currently marked as to-be-viewed, mark it to be checked in the HTML template
-        if disease in chosen_public:
-            checked[disease] = 1
-        else:
-            checked[disease] = 0
-        disease_presences.append(disease_lst)
-    # For each HC disease, determine whether it was used in each month from 2016 to present
-    hc_disease_presences = []
-    hc_checked = {}
-    for disease in sorted(all_hc):
-        disease_lst = [disease, disease.split("_")[1] + " " + disease.split("_")[2]]
-        for year in years:
-            year_str = []
-            cur.execute("SELECT DISTINCT month FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE year = " + str(year) + " AND " + disease + " IS NOT NULL;")
-            months = cur.fetchall()
-            months = ", ".join([month_names[int(month[0])] for month in months])
-            disease_lst.append(months)
-        # If disease is currently marked as to-be-viewed, mark it to be checked in the HTML template
-        if disease in chosen_hc:
-            hc_checked[disease] = 1
-        else:
-            hc_checked[disease] = 0
-        hc_disease_presences.append(disease_lst)
-    print('here')
-    #con.commit()
+    disease_presences, checked = shelpers.getDiseasePresences(all_public, chosen_public, "public_interactions", years, cur)
+    hc_disease_presences, hc_checked = shelpers.getDiseasePresences(all_hc, chosen_hc, "hc_reports", years, cur)
+    con.commit()
     con.close()
     return render_template("settings.html", diseases=disease_presences, checked=checked, years=years, hc_diseases=hc_disease_presences, hc_checked=hc_checked)
 
@@ -276,7 +260,7 @@ def editsettings():
     # Get former disease settings
     all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
     # Set the disease settings according to what was inputted in the HTML form
-    helpers.setDiseases(all_public, [key for key in request.form if not ('case' in key or 'death' in key)], all_hc, [key for key in request.form if ('case' in key or 'death' in key)])
+    shelpers.setDiseases(all_public, [key for key in request.form if not ('case' in key or 'death' in key)], all_hc, [key for key in request.form if ('case' in key or 'death' in key)])
     return redirect(url_for('overview'))
     
 # Run application

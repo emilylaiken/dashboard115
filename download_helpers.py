@@ -41,6 +41,7 @@ def makePdf(pdfFileName, listPages, dir = ''):
         pdf.image(dir + str(page), 0, 0)
     pdf.output(dir + pdfFileName + ".pdf", "F")
 
+# Creates single-series line chart in PNG, generates statistics, and appends statistics to parts
 def addSingleSeriesChart(table, condition_string, starting_date_string, ending_date_string, numdays, title, fname, parts, styles):
     duration_string, title_addon = ghelpers.parseDuration('0', 'end')
     chart_sql, total_sql, avg_sql = ghelpers.generateSQL(table, starting_date_string, ending_date_string, duration_string, condition_string)
@@ -51,6 +52,7 @@ def addSingleSeriesChart(table, condition_string, starting_date_string, ending_d
     parts.append(Spacer(1, 0.3*inch))
     return parts
 
+# Creates mutli-series line chart in PNG, generates statistics, and appends statistics to parts
 def addMultiSeriesChart(disease, starting_date_string, ending_date_string, numdays, parts, styles, cur):
     duration_string, title_addon = ghelpers.parseDuration('0', 'end')
     menu_string = disease + "_menu"
@@ -82,6 +84,31 @@ def addMultiSeriesChart(disease, starting_date_string, ending_date_string, numda
     parts.append(Paragraph("Average calls to " + disease + " menu (overview or prevention): " + str(avg), styles['paragraph']))
     parts.append(Spacer(1, 0.3*inch))
     return parts
+
+# Sends email given subject line, text, distination email, and optional filetitle
+def sendEmail(subject, body_text, filetitle, to_email):
+    print('sending email', file=sys.stderr)
+    fromaddr = "emily.aiken@instedd.org"
+    toaddr = to_email
+    msg = MIMEMultipart()
+    msg['From'] = fromaddr
+    msg['To'] = toaddr
+    msg['Subject'] = subject
+    body = body_text
+    msg.attach(MIMEText(body, 'plain'))
+    if filetitle != None:
+        attachment = open(filetitle, "rb")
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload((attachment).read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', "attachment; filename= %s" % filetitle) 
+        msg.attach(part)
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(fromaddr, "dolphin1997")
+    text = msg.as_string()
+    server.sendmail(fromaddr, toaddr, text)
+    server.quit()
 
 def genReport(starting_date_string, ending_date_string, qualitative, to_email, target_url, numdays):
     # File title includes current timestamp for unique identification
@@ -159,44 +186,10 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
         append_pdf(PdfFileReader(open("graphs.pdf","rb")),output)
         output.write(open(filetitle,"wb"))
         # Send email
-        print('sending email', file=sys.stderr)
-        fromaddr = "emily.aiken@instedd.org"
-        toaddr = to_email
-        msg = MIMEMultipart()
-        msg['From'] = fromaddr
-        msg['To'] = toaddr
-        msg['Subject'] = "Your 115 Hotline Report"
-        body = "The PDF report you requested is attached to this email."
-        msg.attach(MIMEText(body, 'plain'))
-        attachment = open(filetitle, "rb")
-        part = MIMEBase('application', 'octet-stream')
-        part.set_payload((attachment).read())
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', "attachment; filename= %s" % filetitle) 
-        msg.attach(part)
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(fromaddr, "dolphin1997")
-        text = msg.as_string()
-        server.sendmail(fromaddr, toaddr, text)
-        server.quit()
+        sendEmail("Your 115 Hotline Report", "The PDF report you requested is attached to this email.", filetitle, to_email)
+    # If there is an error while generating the report, notify the person who requested it via email
     except:
-        # Send email
-        print('sending email', file=sys.stderr)
-        fromaddr = "emily.aiken@instedd.org"
-        toaddr = to_email
-        msg = MIMEMultipart()
-        msg['From'] = fromaddr
-        msg['To'] = toaddr
-        msg['Subject'] = "115 Hotline Report - Error"
-        body = "Unfortunately, there was an error while generating your 115 hotline report. Please try again later."
-        msg.attach(MIMEText(body, 'plain'))
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(fromaddr, "dolphin1997")
-        text = msg.as_string()
-        server.sendmail(fromaddr, toaddr, text)
-        server.quit()
+        sendEmail("115 Hotline Report - Error", "Unfortunately, there was an error while generating your 115 hotline report. Please try again later.", None, to_email)
     print('done!', file=sys.stderr)
     # Clean up working directory
     for f in os.listdir(os.getcwd()):

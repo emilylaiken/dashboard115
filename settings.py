@@ -5,7 +5,12 @@ import datetime
 import json
 from flask import Flask, redirect, render_template, request, url_for, send_file, session
 
+#hc_diseases = ['diarrhea', 'fever', 'flaccid', 'respiratory', 'dengue', 'meningitis', 'jaundice', 'diphteria', 'rabies', 'neonatal']
+#hc_var_names = ['var_dairrhea_case', 'var_dairrhea_death', 'var_fever_case', 'var_fever_death', 'var_flaccid_case', 'var_flaccid_death', 'var_respiratory_case', 'var_respiratory_death', 'var_dengue_case', 'var_dengue_death', 'var_meningetis_case', 'var_meningitis_death', 'var_juandice_case', 'var_juandice_death', 'var_diphteria_case', 'var_diphteria_death', 'var_rabies_case', 'var_rabies_death', 'va_neonatal_case', 'var_neonatal_death']
+
 # If there is no login yet, sets login to "cdc" and "cdc", otherwise finds out what the current login is 
+
+
 def getCorrectLogin():
     with open('login.json') as infile:
         login = json.load(infile)

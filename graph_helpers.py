@@ -43,10 +43,8 @@ def generateSQL(table, starting_date_string, ending_date_string, duration_string
     return (chart_sql, total_sql, avg_sql)
 
 # Given three SQL statements (one for the chart, one for the total, and one for the average), executes the SQL statements and calls the helper chart function to create the figure
-def generateFigures(chart_sql, total_sql, avg_sql, title, daterange):
+def generateFigures(chart_sql, total_sql, avg_sql, title, daterange, cur):
     num_days = (datetime.datetime.strptime(request.args.get('dateend'), '%Y-%m-%d') - datetime.datetime.strptime(request.args.get('datestart'), '%Y-%m-%d')).days + 1
-    con = sqlite3.connect('logs115.db')
-    cur = con.cursor()
     cur.execute(chart_sql)
     calls_by_date = cur.fetchall()
     dates = []
@@ -61,7 +59,6 @@ def generateFigures(chart_sql, total_sql, avg_sql, title, daterange):
     total = totals[0][0]
     # Average
     avg = total/num_days
-    #con.close()
     return (chart, total, avg)
 
 # Same as the above function, but the chart created by this function is downloadable
@@ -86,21 +83,19 @@ def generateFiguresDownload(chart_sql, total_sql, avg_sql, title, filename, numd
     return (total, avg)
 
 # Calls generateFigures to add single-series figure to the page's list of figures
-def addFigure(condition_string, table, title, charts, totals, averages):
+def addFigure(condition_string, table, title, charts, totals, averages, cur):
     duration_string, title_addon = parseDuration(request.args.get('durationstart'), request.args.get('durationend'))
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
     chart_sql, total_sql, avg_sql = generateSQL(table, starting_date_string, ending_date_string, duration_string, condition_string)
-    chart, total, avg = generateFigures(chart_sql, total_sql, avg_sql, title + title_addon, [starting_date_string, ending_date_string])
+    chart, total, avg = generateFigures(chart_sql, total_sql, avg_sql, title + title_addon, [starting_date_string, ending_date_string], cur)
     charts.append(chart)
     totals.append(total)
     averages.append(avg)
     return charts, totals, averages
 
 # Adds multi-series public disease figure to the page's list of figures
-def addDiseaseFigures(diseases, charts, totals, averages):
-    con = sqlite3.connect('logs115.db')
-    cur = con.cursor()
+def addDiseaseFigures(diseases, charts, totals, averages, cur):
     duration_string, title_addon = parseDuration(request.args.get('durationstart'), request.args.get('durationend'))
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
@@ -132,31 +127,25 @@ def addDiseaseFigures(diseases, charts, totals, averages):
         totals.append(total[0][0])
         #Average visits to menu
         averages.append(total[0][0]/num_days)
-    con.close()
     return charts, totals, averages
 
 # Adds multi-serires HC reports figure to the page's list of figures
-def addHCReportChart(condition_strings, title):
+def addHCReportChart(condition_strings, title, cur):
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
-    con = sqlite3.connect('logs115.db')
-    cur = con.cursor()
     series = []
     for condition_string in condition_strings:
         cur.execute("SELECT week_id, sum(" + condition_string + ") FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + " GROUP BY week_id;")
         series.append(cur.fetchall())
     dates = column(series[1], 0)
     series = [column(serie, 1) for serie in series]
-    con.close()
     return chartmaker.case_reports_by_week(condition_strings, dates, series, title)
 
 # Adds multi-series completed vs. attempted figure to the page's list of figures
-def addOnTimeChart(table, title):
+def addOnTimeChart(table, title, cur):
     print("HEREE")
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
-    con = sqlite3.connect('logs115.db')
-    cur = con.cursor()
     cur.execute("SELECT week_id, count(calls.call_id) FROM " + table + " WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) == 2 OR CAST(strftime('%w', date) as integer) == 3)) GROUP BY week_id ORDER BY week_id asc;")
     completed_reports_by_week = cur.fetchall()
     cur.execute("SELECT week_id, count(calls.call_id) FROM " + table + " WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) < 2 OR CAST(strftime('%w', date) as integer) > 3)) GROUP BY week_id ORDER BY week_id asc;")
@@ -164,16 +153,13 @@ def addOnTimeChart(table, title):
     weeks = column(completed_reports_by_week, 0)
     completed = column(completed_reports_by_week, 1)
     attempted = column(attempted_reports_by_week, 1)
-    con.close()
     return chartmaker.reports_by_week(weeks, completed, attempted, title)
 
 # Adds multi-series completed vs. attempted figure to the page's list of figures
-def addCompletedAttemptedChart(charts, totals, averages):
+def addCompletedAttemptedChart(charts, totals, averages, cur):
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
     duration_string, title_addon = parseDuration(request.args.get('durationstart'), request.args.get('durationend'))
-    con = sqlite3.connect('logs115.db')
-    cur = con.cursor()
     data_public = []
     data_hc = []
     statuses = ['incompleted', 'completed', 'terminated']
@@ -184,7 +170,6 @@ def addCompletedAttemptedChart(charts, totals, averages):
         cur.execute("SELECT count(calls.call_id) AS count FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + duration_string + " AND status == '" + unicode(status) + "';")
         calls_by_status_hc = cur.fetchall()
         data_hc.append(calls_by_status_hc[0][0])
-    con.close()
     charts.append(chartmaker.calls_by_status(statuses, data_public, data_hc, "Calls by Status" + title_addon))
     totals.append(None)
     averages.append(None)
