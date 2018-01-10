@@ -14,7 +14,7 @@ def setDiseases(all_public, chosen_public, all_hc, chosen_hc):
     return helpers.getDiseases()
 
 # Searches database for available diseases (HC or public) and when they were used
-def getDiseasePresences(all_diseases, chosen_diseases, hotline_type, years, cur):
+def getDiseasePresences(all_diseases, chosen_diseases, hotline_type, cur):
     month_names = {1:'January', 2:'February', 3:'March', 4:'April', 5:'May', 6:'June', 7:'July', 8:'August', 9:'September', 10:'October', 11:'November', 12:'December'}
     disease_presences = []
     checked = {}
@@ -25,18 +25,25 @@ def getDiseasePresences(all_diseases, chosen_diseases, hotline_type, years, cur)
         else:
             disease_lst = [disease, disease.split("_")[1] + " " + disease.split("_")[2]]
             disease_var_name = disease
-        for year in years:
-            year_str = []
-            cur.execute("SELECT DISTINCT month FROM calls JOIN " + hotline_type + " ON calls.call_id = " + hotline_type + ".call_id WHERE year = " + str(year) + " AND " + disease_var_name + " IS NOT NULL;")
-            months = cur.fetchall()
-            months = ", ".join([month_names[int(month[0])] for month in months])
-            disease_lst.append(months)
+        # Get unique pairs of month and year for the disease
+        cur.execute("SELECT DISTINCT month, year FROM calls JOIN " + hotline_type + " ON calls.call_id = " + hotline_type + ".call_id WHERE " + disease_var_name + " IS NOT NULL ORDER BY YEAR;")
+        yearmonths = cur.fetchall()
+        # Dictionary to hold lists of months in which disease is reported for each year, initialized to empty
+        yeardict = {}
+        for year in helpers.years():
+            yeardict[str(year)] = []
+        # Fill dictionary based on data from query
+        for month, year in yearmonths:
+            yeardict[str(year)].append(month)
+        # Flatten dictionary into list
+        for year in helpers.years():
+            disease_lst.append(", ".join([month_names[int(month)] for month in yeardict[str(year)]]))
+        disease_presences.append(disease_lst)
         # If disease is currently marked as to-be-viewed, mark it to be checked in the HTML template
         if disease in chosen_diseases:
             checked[disease] = 1
         else:
             checked[disease] = 0
-        disease_presences.append(disease_lst)
     return disease_presences, checked
 
 

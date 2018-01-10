@@ -62,4 +62,11 @@ def capitalize(s):
 def dtoi(date):
     return ''.join(date.split('-'))
 
+def years():
+    years = []
+    now = datetime.datetime.now()
+    for year in range (2016, now.year + 1):
+        years = [year] + years
+    return years
+
 

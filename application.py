@@ -283,23 +283,18 @@ def settings():
     # Check for log-in
     if not session.get('logged_in'):
         return redirect(url_for('index'))
-    # Get list of years from 2016 to present
-    years = []
-    now = datetime.datetime.now()
-    for year in range (2016, now.year + 1):
-        years = [year] + years
     # Get disease ptions and selected diseases
     all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
     timestamp_start = datetime.datetime.now()
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
     # For each public disease, determine whether it was used in each month from 2016 to present
-    disease_presences, checked = shelpers.getDiseasePresences(all_public, chosen_public, "public_interactions", years, cur)
-    hc_disease_presences, hc_checked = shelpers.getDiseasePresences(all_hc, chosen_hc, "hc_reports", years, cur)
+    disease_presences, checked = shelpers.getDiseasePresences(all_public, chosen_public, "public_interactions", cur)
+    hc_disease_presences, hc_checked = shelpers.getDiseasePresences(all_hc, chosen_hc, "hc_reports", cur)
     con.close()
     timestamp_end = datetime.datetime.now()
     print("Time to load: " + str(timestamp_end - timestamp_start))
-    return render_template("settings.html", diseases=disease_presences, checked=checked, years=years, hc_diseases=hc_disease_presences, hc_checked=hc_checked)
+    return render_template("settings.html", diseases=disease_presences, checked=checked, years=helpers.years(), hc_diseases=hc_disease_presences, hc_checked=hc_checked)
 
 @app.route("/editsettings", methods=["GET", "POST"])
 def editsettings():
