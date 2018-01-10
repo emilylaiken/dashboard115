@@ -2,7 +2,7 @@ from __future__ import print_function
 import os
 import sqlite3
 import datetime
-from flask import Flask, redirect, render_template, request, url_for, send_file, session, Response
+from flask import Flask, redirect, render_template, request, url_for, send_file, session, Response, json
 import sys
 from werkzeug import secure_filename
 from threading import Thread
@@ -15,6 +15,9 @@ import calendar
 import datetime
 import collections
 import time
+import requests
+import urllib
+from passlib.hash import pbkdf2_sha256
 
 
 #App configurations--set folders and allowed extensions for file uploads
@@ -27,17 +30,23 @@ app.config['SESSION_TYPE'] = 'filesystem'
 @app.route("/", methods=["GET", "POST"])
 def index():
     # REFRESH
-    #helpers.editLogin('cdc', 'cdc')
     if request.method=="POST":
         # Extract correct username and password--if none have been set, default is "cdc" and "cdc"
         username, pwd = helpers.getCorrectLogin()
-        if request.form.get('username') == None or request.form.get('pwd') == None:
+        inputed_username = request.form.get('username')
+        inputed_pwd = request.form.get('pwd')
+        if inputed_username == None or inputed_pwd == None:
             return render_template('index.html')
-        if request.form.get('username') != username or request.form.get('pwd') != pwd:
-            return render_template('wronglogin.html')
-        else:
+        elif (pbkdf2_sha256.verify(inputed_username, username) == True) and (pbkdf2_sha256.verify(inputed_pwd, pwd) == True):
             session['logged_in'] = True
+            #con = sqlite3.connect(':memory:')
+            #cur = con.cursor()
+            #condisc = sqlite3.connect('logs115.db')
+            #query = "".join(line for line in condisc.iterdump())
+            #con.executescript(query)
             return redirect('/overview')
+        else:
+            return render_template('wronglogin.html')
     else:
         return render_template('index.html')
 
@@ -45,13 +54,17 @@ def index():
 def changelogin():
     if request.method=="POST":
         username, pwd = helpers.getCorrectLogin()
-        if request.form.get('oldusername') == None or request.form.get('oldpwd') == None or request.form.get('newusername') == None or request.form.get('newpwd') == None:
+        oldusername = request.form.get('oldusername')
+        oldpwd = request.form.get('oldpwd')
+        newusername = request.form.get('newusername')
+        newpwd = request.form.get('newpwd')
+        if oldusername == None or oldpwd == None or newusername == None or newpwd == None:
             return render_template('changelogin.html')
-        elif request.form.get('oldusername') != username or request.form.get('oldpwd') != pwd:
-            return render_template('wronglogin.html')
-        else:
-            helpers.editLogin(request.form.get('newusername'), request.form.get('newpwd'))
+        elif (pbkdf2_sha256.verify(oldusername, username) == True) and (pbkdf2_sha256.verify(oldpwd, pwd) == True):
+            helpers.editLogin(pbkdf2_sha256.hash(newusername), pbkdf2_sha256.hash(newpwd))
             return redirect('/')
+        else:
+            return render_template('wronglogin.html')
     else:
         return render_template('changelogin.html')
 
@@ -84,14 +97,16 @@ def loadingmemory():
 
 ########## DASHBOARD PAGES: OVERVIEW, PUBLIC, AND HC REPORTS ##########
 @app.route('/overview', methods=["GET", "POST"])
-def overview():  
+def overview():
     # Check for log-in
     if not session.get('logged_in'):
         return redirect(url_for('index'))
     # Check for all necessary parameters
     if helpers.argsMissing():
         return redirect(helpers.redirectWithArgs('/overview'))
+    #print(r)
     # Open database
+    timestamp_start = datetime.datetime.now()
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
     # Parse duration and dates from URL parameters
@@ -104,6 +119,8 @@ def overview():
     charts, totals, averages = ghelpers.addCompletedAttemptedChart(charts, totals, averages, cur)
     # Close database
     con.close()
+    timestamp_end = datetime.datetime.now()
+    print("Time to load: " + str(timestamp_end - timestamp_start))
     return render_template("overview.html", figures = zip(charts, totals, averages))
 
 @app.route("/public", methods=["GET", "POST"])
@@ -115,6 +132,7 @@ def public():
     if helpers.argsMissing():
         return redirect(helpers.redirectWithArgs('/public'))
     # Open database
+    timestamp_start = datetime.datetime.now()
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
     # Create figures
@@ -127,6 +145,8 @@ def public():
     charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='4'", table="public", title="Calls Requesting Ambulance Information by Day", charts=charts, totals=totals, averages=averages, cur=cur)
     # Close database
     con.close()
+    timestamp_end = datetime.datetime.now()
+    print("Time to load: " + str(timestamp_end - timestamp_start))
     return render_template("public.html", figures=zip(charts, totals, averages))
 
 
@@ -139,6 +159,7 @@ def hcreports():
     if helpers.timeArgsMissing():
         return redirect(helpers.redirectWithArgs('/hcreports'))
     # Open database
+    timestamp_start = datetime.datetime.now()
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
     # Parse URL parameters
@@ -152,6 +173,8 @@ def hcreports():
     charts.append(ghelpers.addHCReportChart([disease for disease in sorted(hc_diseases) if 'death' in disease], "Reports of Disease Deaths by Week", cur))
     # Close database
     con.close()
+    timestamp_end = datetime.datetime.now()
+    print("Time to load: " + str(timestamp_end - timestamp_start))
     return render_template("hcreports.html", charts=charts)
 
 ########## DOWNLOADABLE REPORTS ##########
@@ -208,6 +231,28 @@ def upload():
     else:
         return render_template("upload3.html")
 
+@app.route("/callback", methods=["GET"])
+def callback():
+    # Check to make sure we are not acessing the page in a browser
+    if request.args.get('CallStatus') != None:
+        # If there is a callback that is some form of finished
+        if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress']:
+            call_id = request.args.get('CallSid')
+            print('RECIEVED CALLBACK FROM CALL ID ' + call_id)
+            auth_data = { #Change authentication data to Kakada's data when change to CDC 
+                    "account": {
+                        "email": "emily.aiken@instedd.org",
+                        "password": "dolphin1997"
+                    }
+                }
+            headers = {'content-type': 'application/json'}
+            authorize = requests.post("http://verboice.com/api2/auth", headers=headers, data=json.dumps(auth_data))
+            token = json.loads(authorize.text)['auth_token']
+            call_log_data = requests.get('http://verboice.com/api2/call_logs/' + call_id + '?email=' + urllib.quote('emily.aiken@instedd.org', safe='') + '&token=' + token) #Change email data to Kakada's when change to CDC 
+            for input in json.loads(call_log_data.text)['call_log_answers']:
+                print(input['project_variable_name'] + ": " + input['value'])
+    response = app.response_class(status=200)
+    return response
 
 @app.route("/dataload", methods=["GET", "POST"])
 def dataload():
@@ -233,6 +278,8 @@ def dataload():
 ############# SETTINGS ################
 @app.route("/settings", methods=["GET", "POST"])
 def settings():
+    #global con 
+    #global cur
     # Check for log-in
     if not session.get('logged_in'):
         return redirect(url_for('index'))
@@ -243,13 +290,15 @@ def settings():
         years = [year] + years
     # Get disease ptions and selected diseases
     all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
+    timestamp_start = datetime.datetime.now()
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
     # For each public disease, determine whether it was used in each month from 2016 to present
     disease_presences, checked = shelpers.getDiseasePresences(all_public, chosen_public, "public_interactions", years, cur)
     hc_disease_presences, hc_checked = shelpers.getDiseasePresences(all_hc, chosen_hc, "hc_reports", years, cur)
-    con.commit()
     con.close()
+    timestamp_end = datetime.datetime.now()
+    print("Time to load: " + str(timestamp_end - timestamp_start))
     return render_template("settings.html", diseases=disease_presences, checked=checked, years=years, hc_diseases=hc_disease_presences, hc_checked=hc_checked)
 
 @app.route("/editsettings", methods=["GET", "POST"])

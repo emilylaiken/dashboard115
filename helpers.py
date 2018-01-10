@@ -4,15 +4,13 @@ import sqlite3
 import datetime
 import json
 from flask import Flask, redirect, render_template, request, url_for, send_file, session
+from passlib.hash import pbkdf2_sha256
 
 # If there is no login yet, sets login to "cdc" and "cdc", otherwise finds out what the current login is 
 def getCorrectLogin():
     with open('login.json') as infile:
         login = json.load(infile)
-        if login['username'] == None or login['pwd'] == None:
-            return 'cdc', 'cdc'
-        else:
-            return login['username'], login['pwd']
+        return login['username'], login['pwd']
 
 def editLogin(username, pwd):
     with open('login.json', 'w') as outfile:
