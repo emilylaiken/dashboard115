@@ -1,0 +1,29 @@
+{% extends "layout_durationfilter.html" %}
+{% set active_page = ap %}
+
+{% block body %}
+
+<body onload='loadCharts()'>
+	{% for canvasid, javascript, total, avg in figures %}
+		<canvas id={{ canvasid|safe }}></canvas>
+		{% if canvasid[1:7] == 'public' %}
+			<br />
+			<p> <b> Total: </b> {{ total }} </p>
+			<p> <b> Average (per day): </b> {{ avg }} </p>
+		{% endif %}
+		<br />
+		<br />
+		<br />
+	{% endfor %}
+</body>
+
+<script src={{ url_for('static', filename="js/node_modules/chart.js/dist/Chart.js") }}></script>
+<script src={{ url_for('static', filename="js/plotmaker.js") }}></script>
+<script>
+	{% for canvasid, js, total, avg in figures %}
+		{{ js|safe }}
+	{% endfor %}
+</script>
+{% endblock %}
+
+

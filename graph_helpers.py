@@ -182,5 +182,119 @@ def addCompletedAttemptedChart(charts, totals, averages, cur):
     averages.append(None)
     return charts, totals, averages
 
+def hcOntimeChart(cur, starting_date_string, ending_date_string):
+    cur.execute("SELECT week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) == 2 OR CAST(strftime('%w', date) as integer) == 3)) GROUP BY week_id ORDER BY week_id asc;")
+    completed_reports_by_week = cur.fetchall()
+    cur.execute("SELECT week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) < 2 OR CAST(strftime('%w', date) as integer) > 3)) GROUP BY week_id ORDER BY week_id asc;")
+    attempted_reports_by_week = cur.fetchall()
+    weeks = column(completed_reports_by_week, 0)
+    completed = column(completed_reports_by_week, 1)
+    attempted = column(attempted_reports_by_week, 1)
+    return lineChart(weeks, [completed, attempted], ["Completed Reports", "Attempted Reports"], palette[0:2], "HC Reports by Week - Completed vs. Attempted", True, "None", "None", "completeness") + ("", "")
+
+def addHcDiseaseCharts(cur, figures, starting_date_string, ending_date_string):
+    for addon in ["_case", "_death"]:
+        series = []
+        # Initialize empty dictionary to hold reports
+        reports = collections.OrderedDict()
+        _, _, _, hc_diseases = helpers.getDiseases()
+        diseases = [disease for disease in hc_diseases if addon in disease]
+        for disease in sorted(diseases):
+            reports[disease] = []
+        reports['dates'] = []
+        # Query database for sum of reports of each disease eah week
+        cur.execute("SELECT week_id, " + ", ".join(["sum(" + disease + ")" for disease in diseases]) + " FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + " GROUP BY week_id;")
+        weeks = cur.fetchall()
+        # Write sums from SQL query into database
+        for week in weeks:
+            reports['dates'].append(week[0])
+            for i in range (0, len(diseases)):
+                reports[diseases[i]].append(week[i+1])
+        series, labels, colors = [], [], []
+        i = 0
+        for key, value in reports.items():
+            if key != 'dates':
+                series.append(value)
+                labels.append(key)
+                colors.append(palette[i])
+                i = i+1
+        figures.append(lineChart(reports['dates'], series, labels, colors, "Reports of Disease " + addon[1:].title() + "s by Week", True, "None", "None", "hc" + addon[1:]) + ("", ""))
+    return figures
+
+def addPublicDiseaseCharts(cur, figures, starting_date_string, ending_date_string, duration_string):
+    _, public_diseases, _, _ = helpers.getDiseases()
+    for disease in sorted(public_diseases):
+        figures.append(publicLineChart(cur, 'public', [disease + "_menu IS NOT NULL", disease + "_menu=1", disease + "_menu=2"], starting_date_string, ending_date_string, duration_string, ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"], "Calls to " + disease.title() + " Menu", True, "public" + disease))
+    return figures
+
+def publicLineChart(cur, table, condition_strings, starting_date_string, ending_date_string, duration_string, seriesnames, title, legend, canvasid):
+    series = []
+    colors = []
+    dates = []
+    for i in range (0, len(condition_strings)):
+        condition_string = condition_strings[i]
+        chart_sql, _, _ = generateSQL(table, starting_date_string, ending_date_string, duration_string, condition_string)
+        cur.execute(chart_sql)
+        calls_by_date = cur.fetchall()
+        numcalls = []
+        for log in calls_by_date:
+            if i == 0:
+                dates = dates + [log[0]]
+            numcalls = numcalls + [log[1]]
+        series.append(list(reversed(numcalls)))
+        colors.append(palette[i])
+        if i == 0:
+            total = sum(numcalls)
+            if total == 0:
+                avg = 0
+            else:
+                avg = sum(numcalls) / len(numcalls)
+    return lineChart(list(reversed(dates)), series, seriesnames, colors, title, legend, starting_date_string, ending_date_string, canvasid) + (total, avg)
+
+def lineChart(labels, data, seriesnames, colors, title, legend, minx, maxx, canvasid):
+    type_str = '"line"'
+    labels_str = "[" + ", ".join(['"' + str(label) + '"' for label in labels]) + "]"
+    data_str = "[" + ", ".join(["[" + ", ".join([str(point) for point in series]) + "]" for series in data]) + "]"
+    seriesnames_str = '[' + ", ".join(['"' + name + '"' for name in seriesnames]) + ']'
+    colors_str = '[' + ", ".join(['"' + color + '"' for color in colors]) + ']'
+    title_str = '"' + title + '"'
+    if legend:
+        legend_str = '"True"'
+    else:
+        legend_str = '"False"'
+    minx_str, maxx_str = '"' + minx + '"', '"' + maxx + '"'
+    canvasid_str = '"' + canvasid + '"'
+    javascript_func = "setUpChart(" + type_str + ", " + labels_str + ", " + data_str + ", " + seriesnames_str + ", " + colors_str + ", " +  title_str + ", " + legend_str + ", " + minx_str + ", " + maxx_str + ", " + canvasid_str +  ");"
+    return canvasid_str, javascript_func
+
+def statusChart(cur, table, starting_date_string, ending_date_string, duration_string):
+    data = []
+    statuses = ['incompleted', 'completed', 'terminated']
+    if table == 'public':
+        table_name = "public_interactions"
+    else:
+        table_name = "hc_reports"
+    for status in statuses:
+        cur.execute("SELECT count(calls.call_id) FROM calls JOIN " + table_name + " ON calls.call_id = " + table_name + ".call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + duration_string + " AND status == '" + unicode(status) + "';")
+        calls_by_status = cur.fetchall()
+        data.append(calls_by_status[0][0])
+    return pieChart(statuses, data, palette[0:len(statuses)], "Calls by Status - " + table.title(), "callsbystatus" + table[0]) + ("", "")
+
+def pieChart(labels, data, colors, title, canvasid):
+    type_str = '"pie"'
+    labels_str = "[" + ", ".join(['"' + str(label) + '"' for label in labels]) + "]"
+    data_str = "[" + ", ".join([str(point) for point in data]) + "]"
+    seriesnames_str = "[]"
+    legend_str = '"False"'
+    minx_str, maxx_str = '"None"', '"None"'
+    colors_str = '[' + ", ".join(['"' + color + '"' for color in colors]) + ']'
+    title_str = '"' + title + '"'
+    canvasid_str = '"' + canvasid + '"'
+    javascript_func = "setUpChart(" + type_str + ", " + labels_str + ", " + data_str + ", " + seriesnames_str + ", " + colors_str + ", " +  title_str + ", " + legend_str + ", " + minx_str + ", " + maxx_str + ", " + canvasid_str +  ");"
+    return canvasid_str, javascript_func
+
+
+
+palette = ["#baffc9", "#ffb3ba", "#bae1ff", "#ffffba", "#ffdfba", "#DDA0DD", "#FFAEB9", "#96C8A2", "#D8BFD8", "#D3D3D3"]
 
 

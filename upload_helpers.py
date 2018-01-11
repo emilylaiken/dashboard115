@@ -54,8 +54,8 @@ def loadData(data_file_name):
     #cur.execute("DROP TABLE hc_reports;")
     #cur.execute("DROP TABLE public_interactions;")
     #helpers.setDiseases([], [], [], [])
-    with open(data_file_name, 'rU') as fin: # In-file is rawcalls.csv
-        dr = csv.DictReader(fin) # First line is used as column headers by default
+    with open(data_file_name, 'rU') as fin: 
+        dr = csv.DictReader(fin) 
         for req_attribute in req_attributes:
             if req_attribute not in dr.fieldnames:
                 return "Missing attribute: " + req_attribute, "", ""
@@ -292,3 +292,5 @@ def altLoad(data_file_name):
         hc_disease_titles = [str.title(disease.split('_')[1] + " " + disease.split('_')[2]) for disease in new_hc_diseases]
         new_hc_msg = "New public diseases detected: " + str.title(", ".join(hc_disease_titles)) + "."
     return num_loaded_msg, new_public_msg, new_hc_msg
+
+

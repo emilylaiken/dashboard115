@@ -2,32 +2,28 @@
 {% set active_page = "overviewlink" %}
 
 {% block body %}
-<body onload={{"'setUpChart("|safe ~ labels|safe ~ ", " ~ data ~ ")'"|safe}}>
-	<canvas id="myChart"></canvas>
-	<script src={{ url_for('static', filename="js/node_modules/chart.js/dist/Chart.js") }}></script>
-	<script>
-		function setUpChart(labels, data) {
-			var ctx = document.getElementById("myChart");
-			ctx.height = 100;
-			var myLineChart = new Chart(ctx, {
-			    type: 'line',
-				data: {
-				    labels: labels,
-			  		datasets: [{
-			    		label: "Calls to 115 Hotline",
-			    		data: data,
-			    		fill: false
-			  		}]
-			    },
-			    options: {
-			    	legend: {
-	    				display: false
-	    			}
-	    		}
-			});
-		};
-	</script>
+
+<body onload='loadCharts()'>
+	{% for canvasid, javascript, total, avg in figures %}
+		<canvas id={{ canvasid|safe }}></canvas>
+		{% if canvasid[1:7] == 'public' %}
+			<br />
+			<p> <b> Total: </b> {{ total }} </p>
+			<p> <b> Average (per day): </b> {{ avg }} </p>
+		{% endif %}
+		<br />
+		<br />
+		<br />
+	{% endfor %}
 </body>
+
+<script src={{ url_for('static', filename="js/node_modules/chart.js/dist/Chart.js") }}></script>
+<script src={{ url_for('static', filename="js/plotmaker.js") }}></script>
+<script>
+	{% for canvasid, js, total, avg in figures %}
+		{{ js|safe }}
+	{% endfor %}
+</script>
 {% endblock %}
 
 
