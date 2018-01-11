@@ -116,7 +116,7 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
     filetitle = "report" + now.strftime("%d-%m-%y-%H-%M-%S") + ".pdf"
     print('writing qualitative', file=sys.stderr)
     #Set up PDF document and styles
-    try:
+    if True:
         doc = SimpleDocTemplate("hello.pdf", pagesize=letter)
         parts = []
         folder = os.path.dirname(reportlab.__file__) + os.sep + 'fonts'   
@@ -188,8 +188,8 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
         # Send email
         sendEmail("Your 115 Hotline Report", "The PDF report you requested is attached to this email.", filetitle, to_email)
     # If there is an error while generating the report, notify the person who requested it via email
-    except:
-        sendEmail("115 Hotline Report - Error", "Unfortunately, there was an error while generating your 115 hotline report. Please try again later.", None, to_email)
+    #except:
+        #sendEmail("115 Hotline Report - Error", "Unfortunately, there was an error while generating your 115 hotline report. Please try again later.", None, to_email)
     print('done!', file=sys.stderr)
     # Clean up working directory
     for f in os.listdir(os.getcwd()):
