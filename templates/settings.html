@@ -5,6 +5,7 @@
 	<form enctype="multipart/form-data" method="post" action="/editsettings">
 		<!-- First section: select diseases for public hotline -->
 		<h3> Disease Information - Public Hotline  </h3>
+		<p> Diseases available to the public are auto-detected from a call log's schema when it is uploaded. Columns in the call log with titles ending in "_menu" (excluding "hotline_menu" and "disease_menu") are detected as diseases. All diseases ever reported are displayed here, and you can choose which ones will be displayed in the dashboard and on downloaded reports. </p>
 		<br />
 		<table class="table" width=100%> 
 			<!-- Labels -->
@@ -35,6 +36,7 @@
 		<hr>
 		<!-- Second section: select diseases for HC workers --> 
 		<h3> Disease Information - HC Worker Hotline  </h3>
+		<p> Diseases reported by HC workers are auto-detected from a call log's schema when it is uploaded. Columns in the call log with titles beginning with "var_" and ending with "_case" or "_death" are detected as diseases. All diseases ever reported are displayed here, and you can choose which ones will be displayed in the dashboard and on downloaded reports. </p>
 		<br />
 		<table class="table" width=100%>
 			<!-- Labels --> 
