@@ -269,7 +269,7 @@ def lineChart(labels, data, seriesnames, colors, title, legend, minx, maxx, canv
 
 def statusChart(cur, table, starting_date_string, ending_date_string, duration_string):
     data = []
-    statuses = ['incompleted', 'completed', 'terminated']
+    statuses = ['completed', 'incompleted', 'terminated']
     if table == 'public':
         table_name = "public_interactions"
     else:
@@ -278,7 +278,7 @@ def statusChart(cur, table, starting_date_string, ending_date_string, duration_s
         cur.execute("SELECT count(calls.call_id) FROM calls JOIN " + table_name + " ON calls.call_id = " + table_name + ".call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + duration_string + " AND status == '" + unicode(status) + "';")
         calls_by_status = cur.fetchall()
         data.append(calls_by_status[0][0])
-    return pieChart(statuses, data, [palette[1], palette[0], palette[2]], "Calls by Status - " + table.title(), "callsbystatus" + table[0]) + ("", "")
+    return pieChart([status.title() for status in statuses], data, palette[0:len(statuses)], "Calls by Status - " + table.title(), "callsbystatus" + table[0]) + ("", "")
 
 def pieChart(labels, data, colors, title, canvasid):
     type_str = '"pie"'

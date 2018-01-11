@@ -46,11 +46,6 @@ function setUpChart(type, labels, data, seriesnames, colors, title, legend, minx
                     fontSize: 18,
                     fontFamily: 'Helvetica Neue'
                 },
-                elements: {
-                    point:{
-                        radius: 0
-                    }
-                },
                 scales: scales
             }
         });
@@ -78,11 +73,6 @@ function setUpChart(type, labels, data, seriesnames, colors, title, legend, minx
                     text: title,
                     fontSize: 18,
                     fontFamily: 'Helvetica Neue'
-                },
-                elements: {
-                    point:{
-                        radius: 0
-                    }
                 }
             }
         });
