@@ -123,6 +123,41 @@ def overview():
     print("Time to load: " + str(timestamp_end - timestamp_start))
     return render_template("overview.html", figures = zip(charts, totals, averages))
 
+@app.route('/altoverview', methods=["GET", "POST"])
+def altoverview():
+    # Check for log-in
+    if not session.get('logged_in'):
+        return redirect(url_for('index'))
+    # Check for all necessary parameters
+    if helpers.argsMissing():
+        return redirect(helpers.redirectWithArgs('/altoverview'))
+    # Open database
+    timestamp_start = datetime.datetime.now()
+    con = sqlite3.connect('logs115.db')
+    cur = con.cursor()
+    # Parse duration and dates from URL parameters
+    duration_string, title_addon = ghelpers.parseDuration(request.args.get('durationstart'), request.args.get('durationend'))
+    starting_date_string = request.args.get('datestart')
+    ending_date_string = request.args.get('dateend')
+    # Create figures
+    chart_sql, _, _ = ghelpers.generateSQL('all', starting_date_string, ending_date_string, duration_string, "call_id != ''")
+    cur.execute(chart_sql)
+    calls_by_date = cur.fetchall()
+    dates = []
+    numcalls = []
+    for log in calls_by_date:
+        dates = dates + [log[0]]
+        numcalls = numcalls + [log[1]]
+    # Close database
+    con.close()
+    timestamp_end = datetime.datetime.now()
+    print("Time to load: " + str(timestamp_end - timestamp_start))
+    labels = "[" + ", ".join(['"' + str(date) + '"' for date in reversed(dates)]) + "]"
+    data = "[" + ", ".join([str(numcall) for numcall in reversed(numcalls)]) + "]"
+    print(labels)
+    print(data)
+    return render_template("altoverview.html", labels=labels, data=data)
+
 @app.route("/public", methods=["GET", "POST"])
 def public():
     # Check for log-in

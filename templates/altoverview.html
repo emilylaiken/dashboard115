@@ -1,0 +1,33 @@
+{% extends "layout_durationfilter.html" %}
+{% set active_page = "overviewlink" %}
+
+{% block body %}
+<body onload={{"'setUpChart("|safe ~ labels|safe ~ ", " ~ data ~ ")'"|safe}}>
+	<canvas id="myChart"></canvas>
+	<script src={{ url_for('static', filename="js/node_modules/chart.js/dist/Chart.js") }}></script>
+	<script>
+		function setUpChart(labels, data) {
+			var ctx = document.getElementById("myChart");
+			ctx.height = 100;
+			var myLineChart = new Chart(ctx, {
+			    type: 'line',
+				data: {
+				    labels: labels,
+			  		datasets: [{
+			    		label: "Calls to 115 Hotline",
+			    		data: data,
+			    		fill: false
+			  		}]
+			    },
+			    options: {
+			    	legend: {
+	    				display: false
+	    			}
+	    		}
+			});
+		};
+	</script>
+</body>
+{% endblock %}
+
+
