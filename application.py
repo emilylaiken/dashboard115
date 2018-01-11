@@ -142,7 +142,7 @@ def overview():
     # OVERVIEW CHARTS
     figures.append(ghelpers.publicLineChart(cur, 'all', ["call_id != ''"], starting_date_string, ending_date_string, duration_string, ["Calls to Entire Hotline"], "Calls to Entire Hotline by Day", False, "publicallcalls"))
     figures.append(ghelpers.statusChart(cur,"public", starting_date_string, ending_date_string, duration_string))
-    figures.append(ghelpers.statusChart(cur,"hc workers", starting_date_string, ending_date_string, duration_string))
+    figures.append(ghelpers.statusChart(cur,"healthcare workers", starting_date_string, ending_date_string, duration_string))
     # Close database
     con.close()
     return render_template("dashboardpage.html", figures=figures, ap = 'overviewlink')

@@ -215,7 +215,7 @@ def addHcDiseaseCharts(cur, figures, starting_date_string, ending_date_string):
         for key, value in reports.items():
             if key != 'dates':
                 series.append(value)
-                labels.append(key)
+                labels.append(key.split("_")[1].title() + " " + key.split("_")[2].title() + "s")
                 colors.append(palette[i])
                 i = i+1
         figures.append(lineChart(reports['dates'], series, labels, colors, "Reports of Disease " + addon[1:].title() + "s by Week", True, "None", "None", "hc" + addon[1:]) + ("", ""))
@@ -278,7 +278,7 @@ def statusChart(cur, table, starting_date_string, ending_date_string, duration_s
         cur.execute("SELECT count(calls.call_id) FROM calls JOIN " + table_name + " ON calls.call_id = " + table_name + ".call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + duration_string + " AND status == '" + unicode(status) + "';")
         calls_by_status = cur.fetchall()
         data.append(calls_by_status[0][0])
-    return pieChart(statuses, data, palette[0:len(statuses)], "Calls by Status - " + table.title(), "callsbystatus" + table[0]) + ("", "")
+    return pieChart(statuses, data, [palette[1], palette[0], palette[2]], "Calls by Status - " + table.title(), "callsbystatus" + table[0]) + ("", "")
 
 def pieChart(labels, data, colors, title, canvasid):
     type_str = '"pie"'
