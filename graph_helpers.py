@@ -6,7 +6,7 @@ import chartmaker
 import sys
 import helpers
 import datetime
-
+import collections
 
 # Get the specified column of a table (used to get specific series for graphs)
 def column(matrix, i):
@@ -130,20 +130,27 @@ def addDiseaseFigures(diseases, charts, totals, averages, cur):
     return charts, totals, averages
 
 # Adds multi-serires HC reports figure to the page's list of figures
-def addHCReportChart(condition_strings, title, cur):
+def addHCReportChart(diseases, title, cur):
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
     series = []
-    for condition_string in condition_strings:
-        cur.execute("SELECT week_id, sum(" + condition_string + ") FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + " GROUP BY week_id;")
-        series.append(cur.fetchall())
-    dates = column(series[1], 0)
-    series = [column(serie, 1) for serie in series]
-    return chartmaker.case_reports_by_week(condition_strings, dates, series, title)
+    # Initialize empty dictionary to hold reports
+    reports = collections.OrderedDict()
+    for disease in diseases:
+        reports[disease] = []
+    reports['dates'] = []
+    # Query database for sum of reports of each disease eah week
+    cur.execute("SELECT week_id, " + ", ".join(["sum(" + disease + ")" for disease in diseases]) + " FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + " GROUP BY week_id;")
+    weeks = cur.fetchall()
+    # Write sums from SQL query into database
+    for week in weeks:
+        reports['dates'].append(week[0])
+        for i in range (0, len(diseases)):
+            reports[diseases[i]].append(week[i+1])
+    return chartmaker.case_reports_by_week(reports, title)
 
 # Adds multi-series completed vs. attempted figure to the page's list of figures
 def addOnTimeChart(table, title, cur):
-    print("HEREE")
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
     cur.execute("SELECT week_id, count(calls.call_id) FROM " + table + " WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) == 2 OR CAST(strftime('%w', date) as integer) == 3)) GROUP BY week_id ORDER BY week_id asc;")
@@ -155,7 +162,7 @@ def addOnTimeChart(table, title, cur):
     attempted = column(attempted_reports_by_week, 1)
     return chartmaker.reports_by_week(weeks, completed, attempted, title)
 
-# Adds multi-series completed vs. attempted figure to the page's list of figures
+# Adds two-subplots pie charts depicting percentage of calls successful, failed, etc (one for HC workers and one for public)
 def addCompletedAttemptedChart(charts, totals, averages, cur):
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')

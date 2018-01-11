@@ -2,6 +2,7 @@ import plotly
 import plotly.plotly as py
 import plotly.graph_objs as go
 import helpers
+import datetime
 
 # Calls by type pie chart: HC workers vs. public--ONLINE
 def calls_by_type(hc_workers, public):
@@ -143,7 +144,6 @@ def calls_by_status(labels, data_public, data_hc, title):
 
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
-# Double-series by week, only for completed vs. attempted calls by HC workers--ONLINE, NOT CURRENTLY IN USE
 def reports_by_week(dates, completed, attempted, title):
     figure = {
         "data": [
@@ -157,11 +157,11 @@ def reports_by_week(dates, completed, attempted, title):
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
 
-# Double-series by week: reports by week for HC workers, divided into two series (completed vs. attempted, on-time vs. late, etc.)--ONLINE
-def case_reports_by_week(diseases, dates, series, title):
+def case_reports_by_week(reports, title):
     data = []
-    for i in range (0, len(diseases)):
-        data.append({'x': dates, 'y': series[i], 'name': str.title(diseases[i].split("_")[1] + " " + diseases[i].split("_")[2] + "s")})
+    for key, value in reports.items():
+        if key != 'dates':
+            data.append({'x': reports['dates'], 'y': value, 'name': str.title(key.split("_")[1] + " " + key.split("_")[2] + "s")})
     figure = {
         "data": data,
         "layout": {
