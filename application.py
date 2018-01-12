@@ -399,4 +399,4 @@ def editsettings():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.jinja_env.filters['capitalize'] = helpers.capitalize #Jinja environment filter to capitalize a string
-    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=port, debug=False)

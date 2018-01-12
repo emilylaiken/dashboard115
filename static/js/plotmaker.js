@@ -9,6 +9,9 @@ function setUpChart(type, labels, data, seriesnames, colors, title, legend, minx
                 data: data[i],
                 borderColor: colors[i],
                 backgroundColor: colors[i],
+                borderWidth: 2,
+                pointRadius: 1,
+                pointHoverRadius: 6,
                 fill: false
             })
         };

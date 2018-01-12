@@ -150,7 +150,7 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
         public_calls = cur.fetchall()
         cur.execute("SELECT COUNT(*) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "';")
         hc_calls = cur.fetchall()
-        chartmaker.pie_offline([hc_calls[0][0], public_calls[0][0]], ['Public', 'HC Workers'], "callsbytype.png", "Breakdown of Callers to 115: Public vs. HC Workers")
+        chartmaker.pie_offline([hc_calls[0][0], public_calls[0][0]], ['HC Workers', 'Public'], "callsbytype.png", "Breakdown of Callers to 115: Public vs. HC Workers")
         # Summary of public hotline pie chart
         values = []
         num_accounted_for = 0

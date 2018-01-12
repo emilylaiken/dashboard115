@@ -182,6 +182,8 @@ def addCompletedAttemptedChart(charts, totals, averages, cur):
     averages.append(None)
     return charts, totals, averages
 
+########## NEW PLOTTING LIBRARY FUNCTIONS #########
+
 def hcOntimeChart(cur, starting_date_string, ending_date_string):
     cur.execute("SELECT week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) == 2 OR CAST(strftime('%w', date) as integer) == 3)) GROUP BY week_id ORDER BY week_id asc;")
     completed_reports_by_week = cur.fetchall()
@@ -190,7 +192,7 @@ def hcOntimeChart(cur, starting_date_string, ending_date_string):
     weeks = column(completed_reports_by_week, 0)
     completed = column(completed_reports_by_week, 1)
     attempted = column(attempted_reports_by_week, 1)
-    return lineChart(weeks, [completed, attempted], ["Completed Reports", "Attempted Reports"], palette[0:2], "HC Reports by Week - Completed vs. Attempted", True, "None", "None", "completeness") + ("", "")
+    return lineChart(weeks, [completed, attempted], ["On-Time Reports", "Late Reports"], palette[0:2], "HC Reports by Week - On-Time vs. Late", True, "None", "None", "completeness") + ("", "")
 
 def addHcDiseaseCharts(cur, figures, starting_date_string, ending_date_string):
     for addon in ["_case", "_death"]:
@@ -223,9 +225,40 @@ def addHcDiseaseCharts(cur, figures, starting_date_string, ending_date_string):
 
 def addPublicDiseaseCharts(cur, figures, starting_date_string, ending_date_string, duration_string):
     _, public_diseases, _, _ = helpers.getDiseases()
+   # filter_string = " datenum >=" + "'" + helpers.dtoi(starting_date_string) + "'" " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + duration_string + " "
+   # for disease in sorted(public_diseases):
+   #     series_labels = ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"]
+   #     series = {}
+   #     for label in series_labels:
+   #         series[label] = []
+   #     series['dates'] = []
+   #     menu_string = disease + "_menu"
+   #     cur.execute("SELECT date, " + menu_string + ", COUNT(*) FROM calls JOIN public_interactions ON calls.call_id=public_interactions.call_id WHERE " + filter_string + " GROUP BY date," + menu_string + " ORDER BY date asc;")
+   #     records = cur.fetchall()
+   #     for i in range (0, len(records)):
+   #         record = records[i]
+   #         totalvisit = 0
+   #         if record[1] == 1:
+   #             series['Listen to Overview Info'].append(record[2])
+   #         elif record[1] == 2:
+   #             series['Listen to Prevention Info'].append(record[2])
+   #         if record[1] is not None:
+   #             totalvisit = totalvisit + record[2]
+   #         if i == len(records)-1 or record[0] != records[i+1][0]:
+   #             series['Visit Menu'].append(totalvisit)
+   #             totalvisit = 0
+   #             series['dates'].append(record[0])
+   #     total = sum(series['Visit Menu'])
+   #     if total == 0:
+   #         avg = 0
+   #     else:
+   #         avg = total / len(series['dates'])
+   #     figures.append(lineChart(series['dates'], [series["Visit Menu"], series["Listen to Overview Info"], series["Listen to Prevention Info"]], series_labels, palette[0:3], "Calls to " + disease.title() + " Menu", True, starting_date_string, ending_date_string, "public" + disease) + (total, avg))
+   # return figures 
     for disease in sorted(public_diseases):
         figures.append(publicLineChart(cur, 'public', [disease + "_menu IS NOT NULL", disease + "_menu=1", disease + "_menu=2"], starting_date_string, ending_date_string, duration_string, ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"], "Calls to " + disease.title() + " Menu", True, "public" + disease))
     return figures
+
 
 def publicLineChart(cur, table, condition_strings, starting_date_string, ending_date_string, duration_string, seriesnames, title, legend, canvasid):
     series = []
@@ -295,6 +328,6 @@ def pieChart(labels, data, colors, title, canvasid):
 
 
 
-palette = ["#baffc9", "#ffb3ba", "#bae1ff", "#ffffba", "#ffdfba", "#DDA0DD", "#FFAEB9", "#96C8A2", "#D8BFD8", "#D3D3D3"]
+palette = ["#147a14", "#ff6b6b", "#43b2ab", "#dbc65e", "#4f545a", "#59344f", "#eb8258", "#6689a1", "#9dad6f", "#7d6d61"]
 
 
