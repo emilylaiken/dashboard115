@@ -332,6 +332,7 @@ def dataload():
     if not session.get('logged_in'):
        return redirect(url_for('index'))
     # Get file
+    return render_template("uploadfail.html", message='Unknown reason.')
     csv = request.files['log']
     # The file must be a CSV
     if csv and uhelpers.allowed_file(csv.filename):
