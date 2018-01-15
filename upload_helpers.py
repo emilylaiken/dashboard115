@@ -40,7 +40,7 @@ def parseDateTime(fulldate):
                 return forwards_date, fulldate[i:len(fulldate)]
     return "", ""
 
-def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_attributes, hc_fields_available):
+def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_fields_available):
     # Get time and date from 'started' field
     dateTime = parseDateTime(call['Started'])
     date = dateTime[0]
@@ -73,6 +73,7 @@ def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_attri
         if ((call['cdc_report_started'] == '1' and call['cdc_report_ended'] == '1') or (call['cdc_report_started'] != '1' and report_something == "true")):
             completed = "true"
         to_db = [(call['ID'], completed) + reports]
+        hc_attributes = ['call_id', 'completed'] + hc_fields_available
         cur.executemany("INSERT INTO hc_reports (" + ", ".join(hc_attributes) + ") VALUES (" + ", ".join(["?" for atr in hc_attributes]) + ");", to_db)
         # Record public interaction with menus
     else:
@@ -97,10 +98,10 @@ def loadData(data_file_name):
                         'status':'varchar', 'type':'varchar'}
     req_attributes = ['ID', 'Started', 'Caller interaction', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'level_worker', 'cdc_report_started', 'cdc_report_ended']
     # REFRESH
-    cur.execute("DROP TABLE calls;")
-    cur.execute("DROP TABLE hc_reports;")
-    cur.execute("DROP TABLE public_interactions;")
-    helpers.setDiseases([], [], [], [])
+    #cur.execute("DROP TABLE calls;")
+    #cur.execute("DROP TABLE hc_reports;")
+    #cur.execute("DROP TABLE public_interactions;")
+    #helpers.setDiseases([], [], [], [])
     with open(data_file_name, 'rU') as fin: 
         dr = csv.DictReader(fin) 
         for req_attribute in req_attributes:
@@ -161,7 +162,7 @@ def loadData(data_file_name):
             cur.execute("SELECT * FROM calls WHERE call_id = " + "'" + call['ID'] + "'");
             duplicate_calls = cur.fetchall()
             if len(duplicate_calls) == 0:
-                insertCallLog(cur, call, calls_attributes, public_fields_available, hc_attributes, hc_fields_available)
+                insertCallLog(cur, call, calls_attributes, public_fields_available, hc_fields_available)
                 numInserted = numInserted + 1
             else:
                 numDuplicates = numDuplicates + 1
