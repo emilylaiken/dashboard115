@@ -17,14 +17,6 @@ Werkzeug==0.11.11
 pyPdf==1.13
 reportlab==3.4.0
 fpdf==1.7.2
-numpy==1.13.1
-numpydoc==0.7.0
 passlib==1.7.1
-scipy==0.19.1
 seaborn==0.8
 pandas==0.20.3
-six==1.10.0
-python-dateutil==2.6.1
-pyparsing==2.2.0
-pytz==2017.2
-cycler==0.10.0

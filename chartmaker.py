@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-matplotlib.use('Agg')
 import numpy as np
 import seaborn as sns
 
