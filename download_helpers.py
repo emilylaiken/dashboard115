@@ -19,11 +19,12 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from email.MIMEBase import MIMEBase
 from email import encoders
-from flask import Flask, redirect, render_template, request, url_for, send_file, session
+from flask import Flask, redirect, render_template, request, url_for, send_file, session, json
 import smtplib
 import graph_helpers as ghelpers
 import chartmaker
 import helpers
+import base64
 
 # Append PDFs (input files) to a PDF file writer (output)
 def append_pdf(input,output):
@@ -62,7 +63,9 @@ def addSingleSeriesChart(table, condition_string, starting_date_string, ending_d
 # Sends email given subject line, text, distination email, and optional filetitle
 def sendEmail(subject, body_text, filetitle, to_email, cc, bcc):
     print('sending email', file=sys.stderr)
-    fromaddr = "emily.aiken@instedd.org"
+    with open('s.json') as infile:
+        s  = json.load(infile)
+    fromaddr = base64.b64decode(s["emu"])
     toaddr = to_email
     msg = MIMEMultipart()
     msg['From'] = fromaddr
@@ -83,7 +86,7 @@ def sendEmail(subject, body_text, filetitle, to_email, cc, bcc):
         msg.attach(part)
     server = smtplib.SMTP('smtp.gmail.com', 587)
     server.starttls()
-    server.login(fromaddr, "dolphin1997")
+    server.login(fromaddr, base64.b64decode(s["emp"]))
     text = msg.as_string()
     server.sendmail(fromaddr, toaddr, text)
     server.quit()

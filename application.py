@@ -18,6 +18,7 @@ import time
 import requests
 import urllib
 from passlib.hash import pbkdf2_sha256
+import base64
 
 
 #App configurations--set folders and allowed extensions for file uploads
@@ -39,11 +40,6 @@ def index():
             return render_template('index.html')
         elif (pbkdf2_sha256.verify(inputed_username, username) == True) and (pbkdf2_sha256.verify(inputed_pwd, pwd) == True):
             session['logged_in'] = True
-            #con = sqlite3.connect(':memory:')
-            #cur = con.cursor()
-            #condisc = sqlite3.connect('logs115.db')
-            #query = "".join(line for line in condisc.iterdump())
-            #con.executescript(query)
             return redirect('/overview')
         else:
             return render_template('wronglogin.html')
@@ -247,10 +243,12 @@ def callback():
         if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress']:
             call_id = request.args.get('CallSid')
             print('RECIEVED CALLBACK FROM CALL ID ' + call_id)
+            with open('s.json') as infile:
+                s  = json.load(infile)
             auth_data = { #Change authentication data to Kakada's data when change to CDC 
                     "account": {
-                        "email": "emily.aiken@instedd.org",
-                        "password": "dolphin1997"
+                        "email": base64.b64decode(s["vbu"]),
+                        "password": base64.b64decode(s["vbp"])
                     }
                 }
             headers = {'content-type': 'application/json'}
