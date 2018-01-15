@@ -68,7 +68,7 @@ def sendEmail(subject, body_text, filetitle, to_email, cc, bcc):
     msg['From'] = fromaddr
     msg['To'] = toaddr
     msg['Subject'] = subject
-    if cc is not None and filetitle is not None:
+    if cc != None and filetitle != None:
         msg['cc'] = cc
     if bcc is not None and filetitle is not None:
         msg['bcc'] = bcc
