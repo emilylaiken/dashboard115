@@ -21,7 +21,7 @@ def lineChartDownload(labels, data, seriesnames, colors, title, minx, maxx, fnam
     plt.xticks(np.arange(0, len(labels), divisor), newlabels, rotation=45)
     plt.tick_params(labelsize=7)
     for i in range (0, len(data)):
-        plt.plot(labels, data[i], label=seriesnames[i], color=colors[i], linewidth=1, marker='o')
+        plt.plot(np.arange(0, len(labels)), data[i], label=seriesnames[i], color=colors[i], linewidth=1, marker='o')
     plt.savefig(fname)
 
 def pieChartDownload(labels, data, colors, title, fname):

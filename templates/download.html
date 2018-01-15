@@ -19,7 +19,7 @@
 				</tr>
 		    {% for option in figureoptions %}
 		    	<tr>
-		    		<td><input type="checkbox" class="form-check-input" name={{option.0}} value={{option.0}}></td>
+		    		<td><input type="checkbox" class="form-check-input" name={{option.0}} value={{option.0}} checked></td>
 		    		<td> {{option.1}}   </td>
 		    		<td> <i class={{"'fa fa-"|safe ~ option.2|safe ~ "-chart'"|safe}}</i></td>
 		    	</tr>
