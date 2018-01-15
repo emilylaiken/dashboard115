@@ -69,4 +69,21 @@ def years():
         years = [year] + years
     return years
 
+def getCharts():
+    _, public_diseases, _, hc_diseases = getDiseases()
+    charts = [
+        ("hotlinebreakdown", "Breakdown of calls to entire hotline (HC workers vs. Public)", "pie"),
+        ("publicbreakdown", "Breakdown of calls to public hotline", "pie"),
+        ("overview", "Calls to entire hotline by day", "line"),
+        ("public", "Calls to public hotline by day", "line")
+    ]
+    for disease in public_diseases:
+        charts.append((disease, "Calls to " + disease.title() + " menu by day", "line"))
+    charts = charts + [
+        ("publicreports", "Public reports by day", "line"),
+        ("moreinfo", "Calls requesting more information by day", "line"),
+        ("ambulance", "Calls requesting ambulance information by day", "line")
+    ]
+    return charts
+
 

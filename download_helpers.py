@@ -41,6 +41,13 @@ def makePdf(pdfFileName, listPages, dir = ''):
         pdf.image(dir + str(page), 0, 0)
     pdf.output(dir + pdfFileName + ".pdf", "F")
 
+def appendStats(parts, styles, total, avg, label):
+    parts.append(Paragraph("Total " + label + ": " + str(total), styles['paragraph']))
+    parts.append(Spacer(1, 0.1*inch))
+    parts.append(Paragraph("Average: " + label + " (by day): " + str(avg), styles['paragraph']))
+    parts.append(Spacer(1, 0.3*inch))
+    return parts
+
 # Creates single-series line chart in PNG, generates statistics, and appends statistics to parts
 def addSingleSeriesChart(table, condition_string, starting_date_string, ending_date_string, numdays, title, fname, parts, styles):
     duration_string, title_addon = ghelpers.parseDuration('0', 'end')
@@ -52,41 +59,8 @@ def addSingleSeriesChart(table, condition_string, starting_date_string, ending_d
     parts.append(Spacer(1, 0.3*inch))
     return parts
 
-# Creates mutli-series line chart in PNG, generates statistics, and appends statistics to parts
-def addMultiSeriesChart(disease, starting_date_string, ending_date_string, numdays, parts, styles, cur):
-    duration_string, title_addon = ghelpers.parseDuration('0', 'end')
-    menu_string = disease + "_menu"
-    condition_string_all = menu_string + " IS NOT NULL"
-    condition_string_overview = menu_string + "=1"
-    condition_string_prevention = menu_string + "=2"
-    chart_sql_all, total_sql_all, avg_sql_all = ghelpers.generateSQL("public", starting_date_string, ending_date_string, duration_string, condition_string_all)
-    chart_sql_overview, total_sql_overview, avg_sql_overview = ghelpers.generateSQL("public", starting_date_string, ending_date_string, duration_string, condition_string_overview)
-    chart_sql_prevention, total_sql_prevention, avg_sql_prevention = ghelpers.generateSQL("public", starting_date_string, ending_date_string, duration_string, condition_string_prevention)
-    cur.execute(chart_sql_overview)
-    overview_visits = cur.fetchall()
-    cur.execute(chart_sql_prevention)
-    prevention_visits = cur.fetchall()
-    cur.execute(chart_sql_all)
-    all_visits = cur.fetchall()
-    dates = ghelpers.column(overview_visits, 0)
-    overview = ghelpers.column(overview_visits, 1)
-    prevention = ghelpers.column(prevention_visits, 1)
-    all = ghelpers.column(all_visits, 1)
-    disease_chart = chartmaker.overview_and_prevention_by_day_download(dates, overview, prevention, all, str.title(disease) + title_addon, disease + ".png", [starting_date_string, ending_date_string])
-    cur.execute(total_sql_all)
-    total = cur.fetchall()
-    parts.append(Paragraph("Total calls to " + disease + " menu: " + str(total[0][0]), styles['paragraph']))
-    parts.append(Spacer(1, 0.3*inch))
-    if numdays == 0:
-        avg = 0
-    else:
-        avg = total[0][0]/numdays
-    parts.append(Paragraph("Average calls to " + disease + " menu (overview or prevention): " + str(avg), styles['paragraph']))
-    parts.append(Spacer(1, 0.3*inch))
-    return parts
-
 # Sends email given subject line, text, distination email, and optional filetitle
-def sendEmail(subject, body_text, filetitle, to_email):
+def sendEmail(subject, body_text, filetitle, to_email, cc, bcc):
     print('sending email', file=sys.stderr)
     fromaddr = "emily.aiken@instedd.org"
     toaddr = to_email
@@ -94,6 +68,10 @@ def sendEmail(subject, body_text, filetitle, to_email):
     msg['From'] = fromaddr
     msg['To'] = toaddr
     msg['Subject'] = subject
+    if cc is not None and filetitle is not None:
+        msg['cc'] = cc
+    if bcc is not None and filetitle is not None:
+        msg['bcc'] = bcc
     body = body_text
     msg.attach(MIMEText(body, 'plain'))
     if filetitle != None:
@@ -110,7 +88,7 @@ def sendEmail(subject, body_text, filetitle, to_email):
     server.sendmail(fromaddr, toaddr, text)
     server.quit()
 
-def genReport(starting_date_string, ending_date_string, qualitative, to_email, target_url, numdays):
+def genReport(starting_date_string, ending_date_string, qualitative, to_emails, cc, bcc, target_url, numdays, chosenfigures):
     # File title includes current timestamp for unique identification
     now = datetime.datetime.now()
     filetitle = "report" + now.strftime("%d-%m-%y-%H-%M-%S") + ".pdf"
@@ -144,40 +122,38 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
         con = sqlite3.connect("logs115.db")
         cur = con.cursor()
         print('making sql queries and generating pngs', file=sys.stderr)
-        # Summary pie chart
+        duration_string, title_addon = ghelpers.parseDuration('0', 'end')
         _, public_diseases, _, _ = helpers.getDiseases()
-        cur.execute("SELECT COUNT(*) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "';")
-        public_calls = cur.fetchall()
-        cur.execute("SELECT COUNT(*) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "';")
-        hc_calls = cur.fetchall()
-        chartmaker.pie_offline([hc_calls[0][0], public_calls[0][0]], ['HC Workers', 'Public'], "callsbytype.png", "Breakdown of Callers to 115: Public vs. HC Workers")
-        # Summary of public hotline pie chart
-        values = []
-        num_accounted_for = 0
-        condition_strings = [disease + "_menu IS NOT NULL" for disease in public_diseases] + ["hotline_menu='2'", "hotline_menu='3'", "hotline_menu='4'"]
-        labels = ["Visit " + disease + " Information" for disease in public_diseases] + ['Make a Report', 'Request More Information', 'Request Ambulance Information', 'No Action']
-        for condition_string in condition_strings:
-            cur.execute("SELECT COUNT(*) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE " + condition_string + " AND date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "';")
-            value = cur.fetchall()
-            values.append(value[0][0])
-            num_accounted_for = num_accounted_for + value[0][0]
-        cur.execute("SELECT COUNT(*) FROM calls JOIN public_interactions ON calls.call_id = public_interactions.call_id WHERE date >=" + "'" + starting_date_string + "'" + " AND date <= " + "'" + ending_date_string + "';")
-        total = cur.fetchall()
-        dif = total[0][0] - num_accounted_for
-        values.append(dif)
-        chartmaker.pie_offline(values, labels, "publicbreakdown.png", "Actions of Callers to Public Hotline")
+        chartid = 0
+        # Breakdown pie charts
+        ghelpers.hotlineBreakdown(cur, 'all', ["Public Callers", "HC Workers"], [" type='public' ", " type='hc_worker' "], starting_date_string, ending_date_string, duration_string, "Hotline Breakdown", str(chartid) + "hotlinebreakdown.png")
+        chartid = chartid + 1
+        ghelpers.hotlineBreakdown(cur, 'public', ["Visit " + disease + " Information" for disease in public_diseases] + ['Make a Report', 'Request More Information', 'Request Ambulance Information'], [disease + "_menu IS NOT NULL" for disease in public_diseases] + ["hotline_menu='2'", "hotline_menu='3'", "hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, "Public Hotline Breakdown", str(chartid) + "publicbreakdown.png")
+        chartid = chartid + 1
         # Line charts and statistics
-        parts = addSingleSeriesChart("all", "call_id != ''", starting_date_string, ending_date_string, numdays, "Calls to Entire Hotline", "overview.png", parts, styles)
-        parts = addSingleSeriesChart("all", " type='public' ", starting_date_string, ending_date_string, numdays, "Calls to Public Hotline", "public.png", parts, styles)
+        total, avg = ghelpers.publicLineChart(cur, "all", ["call_id != ''"], starting_date_string, ending_date_string, duration_string, ["Calls to Hotline"], "Calls to Hotline by Day", False, str(chartid) + "overview.png")
+        chartid = chartid + 1
+        parts = appendStats(parts, styles, total, avg, "calls to entire hotline")
+        total, avg = ghelpers.publicLineChart(cur, "all", [" type='public' "], starting_date_string, ending_date_string, duration_string, ["Calls to Public Hotline"], "Calls to Public Hotline by Day", False, str(chartid) + "public.png")
+        chartid = chartid + 1
+        parts = appendStats(parts, styles, total, avg, "calls to public hotline")
         for disease in public_diseases:
-            parts = addMultiSeriesChart(disease, starting_date_string, ending_date_string, numdays, parts, styles, cur)
-        parts = addSingleSeriesChart("public", "hotline_menu='2'", starting_date_string, ending_date_string, numdays, "Public Disease Reports", "publicreports.png", parts, styles)
-        parts = addSingleSeriesChart("public", "hotline_menu='3'", starting_date_string, ending_date_string, numdays, "Calls Requesting Additional Information", "moreinfo.png", parts, styles)
-        parts = addSingleSeriesChart("public", "hotline_menu='4'", starting_date_string, ending_date_string, numdays, "Calls Requesting Ambulance Information", "ambulance.png", parts, styles)
+            total, avg = ghelpers.publicLineChart(cur, "public", [disease + "_menu IS NOT NULL", disease + "_menu=1", disease + "_menu=2"], starting_date_string, ending_date_string, duration_string, ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"], "Calls to " + disease.title() + " Menu by Day", False, str(chartid) + disease + ".png")
+            chartid = chartid + 1
+            parts = appendStats(parts, styles, total, avg, "visitors to " + disease.title() + " menu")
+        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='2'"], starting_date_string, ending_date_string, duration_string, ["Public Disease Reports"], "Public Disease Reports by Day", False, str(chartid) + "publicreports.png")
+        chartid = chartid + 1
+        parts = appendStats(parts, styles, total, avg, "public disease reports")
+        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='3'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Additional Information"], "Cals Requesting Additional Information by Day", False, str(chartid) + "moreinfo.png")
+        chartid = chartid + 1
+        parts = appendStats(parts, styles, total, avg, "calls requesting additional information")
+        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Ambulance Information"], "Cals Requesting Ambulance Information by Day", False, str(chartid) + "ambulance.png")
+        parts = appendStats(parts, styles, total, avg, "calls requesting ambulance information")
         con.close()
         print('creating graphs pdf', file=sys.stderr)
         # Make PDF of all graphs
-        makePdf("graphs", ["callsbytype.png", "publicbreakdown.png", "overview.png", "public.png"] +  [disease + ".png" for disease in public_diseases] +  ["publicreports.png", "moreinfo.png", "ambulance.png"])
+        print(chosenfigures)
+        makePdf("graphs", list(sorted([figure + ".png" for figure in chosenfigures])))
         doc.build(parts)
         # Combine PDF with text (title page, qualitative, statistics) and PDF with graphs
         print('combining all pdfs', file=sys.stderr)
@@ -186,7 +162,7 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_email, t
         append_pdf(PdfFileReader(open("graphs.pdf","rb")),output)
         output.write(open(filetitle,"wb"))
         # Send email
-        sendEmail("Your 115 Hotline Report", "The PDF report you requested is attached to this email.", filetitle, to_email)
+        sendEmail("Your 115 Hotline Report", "The PDF report you requested is attached to this email.", filetitle, to_emails, cc, bcc)
     # If there is an error while generating the report, notify the person who requested it via email
     #except:
         #sendEmail("115 Hotline Report - Error", "Unfortunately, there was an error while generating your 115 hotline report. Please try again later.", None, to_email)

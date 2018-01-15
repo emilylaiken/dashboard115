@@ -3,14 +3,39 @@
 
 {% block body %}
 	<p> The report PDF includes three sections: a qualitative paragraph, statistics, and the graphs as displayed on this dashboard. Select the time period for the report using the filter at upper right. Then, input the qualitative description and your email in the box below. Upon clicking the "email me the report" button, the system will begin to process your PDF report. You will be notified by email when the report is ready, including a link through which you can access the report. </p>
+	<br />
 
 	<form method="post" action={{redirect_string}}>
 		<div class="form-group">
-			<label for="qualitative"> Qualitative description:</label>
+			<h4>Qualitative description:</h4>
 		    <textarea rows = "8" type="text" class="form-control" name="qualitative"></textarea>
 		    <br />
-		    <label for="email"> Email: </label>
-		    <input type="email" class="form-control" name="email">
+		    <h4> Figures to Include: </h4>
+		    <table class="table" width=100%> 
+		    	<tr> 
+					<th> Include? </th>
+					<th> Figure Description </th>
+					<th> Figure Type </th>
+				</tr>
+		    {% for option in figureoptions %}
+		    	<tr>
+		    		<td><input type="checkbox" class="form-check-input" name={{option.0}} value={{option.0}}></td>
+		    		<td> {{option.1}}   </td>
+		    		<td> <i class={{"'fa fa-"|safe ~ option.2|safe ~ "-chart'"|safe}}</i></td>
+		    	</tr>
+		    {% endfor %}
+			</table>
+		    <h4>  Email Information: </h4> 
+		    <label for="email">To</label>
+		    <p> Enter a comma-seperated list of recipients. </p>
+		    <input type="email" multiple="multiple" class="form-control" name="email">
+		    <br />
+		    <label for="cc">CC (optional)</label>
+		    <input type="cc" multiple="multiple" class="form-control" name="cc">
+		    <br />
+		    <label for="bcc">BCC (optional)</label>
+		    <input type="bcc" multiple="multiple" class="form-control" name="bcc">
+		    <br />
 		    <br />
 		    <button type="submit" class="btn btn-default" >Email me the report</button>
 		</div>	

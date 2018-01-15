@@ -26,7 +26,11 @@ def getDiseasePresences(all_diseases, chosen_diseases, hotline_type, cur):
             disease_lst = [disease, disease.split("_")[1] + " " + disease.split("_")[2]]
             disease_var_name = disease
         # Get unique pairs of month and year for the disease
-        cur.execute("SELECT DISTINCT month, year FROM calls JOIN " + hotline_type + " ON calls.call_id = " + hotline_type + ".call_id WHERE " + disease_var_name + " IS NOT NULL ORDER BY YEAR;")
+        if hotline_type == "public_interactions":
+            nonexist_indicator = "IS NOT NULL"
+        else:
+            nonexist_indicator = "!= 0"
+        cur.execute("SELECT DISTINCT month, year FROM calls JOIN " + hotline_type + " ON calls.call_id = " + hotline_type + ".call_id WHERE " + disease_var_name + " " + nonexist_indicator + " ORDER BY YEAR;")
         yearmonths = cur.fetchall()
         # Dictionary to hold lists of months in which disease is reported for each year, initialized to empty
         yeardict = {}

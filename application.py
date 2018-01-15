@@ -96,33 +96,6 @@ def loadingmemory():
 
 
 ########## DASHBOARD PAGES: OVERVIEW, PUBLIC, AND HC REPORTS ##########
-#@app.route('/overview', methods=["GET", "POST"])
-#def overview():
-    # Check for log-in
-#    if not session.get('logged_in'):
-#        return redirect(url_for('index'))
-    # Check for all necessary parameters
-#    if helpers.argsMissing():
-#        return redirect(helpers.redirectWithArgs('/overview'))
-    #print(r)
-    # Open database
-#    timestamp_start = datetime.datetime.now()
-#    con = sqlite3.connect('logs115.db')
-#    cur = con.cursor()
-    # Parse duration and dates from URL parameters
-#    duration_string, title_addon = ghelpers.parseDuration(request.args.get('durationstart'), request.args.get('durationend'))
-#    starting_date_string = request.args.get('datestart')
-#    ending_date_string = request.args.get('dateend')
-    # Create figures
-#    charts, totals, averages = [], [], []
-#    charts, totals, averages = ghelpers.addFigure(condition_string = "call_id != ''", table='all', title="Calls to Entire Hotline by Day", charts=charts, totals=totals, averages=averages, cur=cur)
-#    charts, totals, averages = ghelpers.addCompletedAttemptedChart(charts, totals, averages, cur)
-    # Close database
-#    con.close()
-#    timestamp_end = datetime.datetime.now()
-#    print("Time to load: " + str(timestamp_end - timestamp_start))
-#    return render_template("overview.html", figures = zip(charts, totals, averages))
-
 @app.route('/overview', methods=["GET", "POST"])
 def overview():
     # Check for log-in
@@ -164,8 +137,10 @@ def public():
     ending_date_string = request.args.get('dateend')
     figures = []
     # PUBLIC CHARTS
+    _, public_diseases, _, _ = helpers.getDiseases()
     figures.append(ghelpers.publicLineChart(cur, 'all', [" type='public' "], starting_date_string, ending_date_string, duration_string, ["Calls to Public Hotline"], "Calls to Public Hotline by Day", False, "publiccalls"))
-    figures = ghelpers.addPublicDiseaseCharts(cur, figures, starting_date_string, ending_date_string, duration_string)
+    for disease in sorted(public_diseases):
+        figures.append(ghelpers.publicLineChart(cur, 'public', [disease + "_menu IS NOT NULL", disease + "_menu=1", disease + "_menu=2"], starting_date_string, ending_date_string, duration_string, ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"], "Calls to " + disease.title() + " Menu", True, "public" + disease))
     figures.append(ghelpers.publicLineChart(cur, 'public', ["hotline_menu='2'"], starting_date_string, ending_date_string, duration_string, ["Public Disease Reports"], "Public Disease Reports by Day", False, "publicreports"))
     figures.append(ghelpers.publicLineChart(cur, 'public', ["hotline_menu='3'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting More Information"], "Calls Requesting More Information by Day", False, "publicmoreinfo"))
     figures.append(ghelpers.publicLineChart(cur, 'public', ["hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Ambulance Information"], "Calls Requesting Ambulance Information by Day", False, "publicambulanceinfo"))
@@ -190,64 +165,12 @@ def hcreports():
     figures = []
     # HC REPORT CHARTS
     figures.append(ghelpers.hcOntimeChart(cur, starting_date_string, ending_date_string))
-    figures = ghelpers.addHcDiseaseCharts(cur, figures, starting_date_string, ending_date_string)
+    for addon in ['_case', '_death']:
+        figures.append(ghelpers.hcDiseaseChart(cur, starting_date_string, ending_date_string, addon))
     # Close database
     con.close()
     return render_template("dashboardpage.html", figures=figures, ap = 'hcreportslink')
 
-#@app.route("/public", methods=["GET", "POST"])
-#def public():
-#    # Check for log-in
-#    if not session.get('logged_in'):
-#       return redirect(url_for('index'))
-#    # Check for all necessary parameters
-#    if helpers.argsMissing():
-#        return redirect(helpers.redirectWithArgs('/public'))
-#    # Open database
-#    timestamp_start = datetime.datetime.now()
-#    con = sqlite3.connect('logs115.db')
-#    cur = con.cursor()
-#    # Create figures
-#    _, public_diseases, _, _ = helpers.getDiseases()
-#    charts, totals, averages = [], [], []
-#    charts, totals, averages = ghelpers.addFigure(condition_string=" type='public' ", table='all', title="Calls to Public Hotline by Day", charts=charts, totals=totals, averages=averages, cur=cur)
-#    charts, totals, averages = ghelpers.addDiseaseFigures(sorted(public_diseases), charts, totals, averages, cur)
-#    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='2'", table="public", title="Public Disease Reports by Day", charts=charts, totals=totals, averages=averages, cur=cur)
-#    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='3'", table="public", title="Calls Requesting Additional Information by Day", charts=charts, totals=totals, averages=averages, cur=cur)
-#    charts, totals, averages = ghelpers.addFigure(condition_string="hotline_menu='4'", table="public", title="Calls Requesting Ambulance Information by Day", charts=charts, totals=totals, averages=averages, cur=cur)
-#    # Close database
-#    con.close()
-#    timestamp_end = datetime.datetime.now()
-#    print("Time to load: " + str(timestamp_end - timestamp_start))
-#    return render_template("public.html", figures=zip(charts, totals, averages))
-
-
-#@app.route("/hcreports", methods=["GET", "POST"])
-#def hcreports():
-#    # Check for log-in
-#    if not session.get('logged_in'):
-#        return redirect(url_for('index'))
-#   # Check for all necessary parameters
-#    if helpers.timeArgsMissing():
-#        return redirect(helpers.redirectWithArgs('/hcreports'))
-#    # Open database
-#    timestamp_start = datetime.datetime.now()
-#    con = sqlite3.connect('logs115.db')
-#    cur = con.cursor()
-#    # Parse URL parameters
-#    starting_date_string = request.args.get('datestart')
-#    ending_date_string = request.args.get('dateend')
-#    # Create figures
-#    charts = []
-#    _, _, _, hc_diseases = helpers.getDiseases()
-#    charts.append(ghelpers.addOnTimeChart('calls JOIN hc_reports ON calls.call_id = hc_reports.call_id', "HC Reports by Week (On-Time vs Late)", cur))
-#    charts.append(ghelpers.addHCReportChart([disease for disease in sorted(hc_diseases) if 'case' in disease], "Reports of Disease Cases by Week", cur))
-#    charts.append(ghelpers.addHCReportChart([disease for disease in sorted(hc_diseases) if 'death' in disease], "Reports of Disease Deaths by Week", cur))
-#    # Close database
-#    con.close()
-#    timestamp_end = datetime.datetime.now()
-#    print("Time to load: " + str(timestamp_end - timestamp_start))
-#    return render_template("hcreports.html", charts=charts)
 
 ########## DOWNLOADABLE REPORTS ##########
 @app.route("/download")
@@ -261,7 +184,14 @@ def download():
     # Parse dates from URL parameters
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
-    return render_template("download.html", redirect_string = "/downloading?datestart=" + starting_date_string + "&dateend=" + ending_date_string)
+    _, public_diseases, _, hc_diseases = helpers.getDiseases()
+    charts_with_ids = []
+    charts = helpers.getCharts()
+    for i in range (0, len(charts)):
+        chart = charts[i]
+        charts_with_ids.append((str(i) + chart[0], chart[1], chart[2]))
+    print(charts_with_ids)
+    return render_template("download.html", redirect_string = "/downloading?datestart=" + starting_date_string + "&dateend=" + ending_date_string, figureoptions=charts_with_ids)
 
 @app.route("/downloading", methods=["GET", "POST"])
 def downloading():
@@ -274,9 +204,15 @@ def downloading():
     # Check for necessary elements from form
     if request.form['email'] == None or request.form['email'] == "":
         return render_template("downloadfail.html", message="Please enter an email address.")
+    try:
+        emails = request.form['email'].split(",")
+        ccs = request.form['cc'].split(",")
+        bccs = request.form['bcc'].split(",")
+    except:
+        return render_template("downloadfail.html", message="Please enter a single email or a comma-seperated list of emails for the recipient, cc, and bcc fields.")
     # Fork thread to send email with PDF report
     num_days = (datetime.datetime.strptime(request.args.get('dateend'), '%Y-%m-%d') - datetime.datetime.strptime(request.args.get('datestart'), '%Y-%m-%d')).days + 1
-    th = Thread(target=dhelpers.genReport, args=(request.args.get('datestart'), request.args.get('dateend'), request.form['qualitative'], request.form['email'], url_for('downloaded'), num_days))
+    th = Thread(target=dhelpers.genReport, args=(request.args.get('datestart'), request.args.get('dateend'), request.form['qualitative'], request.form['email'], request.form['cc'], request.form['bcc'], url_for('downloaded'), num_days, [key for key in request.form if not key in ["qualitative", "email", "cc", "bcc"]]))
     th.start()
     return render_template("downloading.html")
 
@@ -373,15 +309,12 @@ def settings():
         return redirect(url_for('index'))
     # Get disease ptions and selected diseases
     all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
-    timestamp_start = datetime.datetime.now()
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
     # For each public disease, determine whether it was used in each month from 2016 to present
     disease_presences, checked = shelpers.getDiseasePresences(all_public, chosen_public, "public_interactions", cur)
     hc_disease_presences, hc_checked = shelpers.getDiseasePresences(all_hc, chosen_hc, "hc_reports", cur)
     con.close()
-    timestamp_end = datetime.datetime.now()
-    print("Time to load: " + str(timestamp_end - timestamp_start))
     return render_template("settings.html", diseases=disease_presences, checked=checked, years=helpers.years(), hc_diseases=hc_disease_presences, hc_checked=hc_checked)
 
 @app.route("/editsettings", methods=["GET", "POST"])
