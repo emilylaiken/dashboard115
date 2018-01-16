@@ -78,7 +78,6 @@ def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_field
                     reports = reports + (deleteStar(call[var]),)
                     report_something = "true"
             except: #Did not enter any of this disease - realtime callback
-                print('exception because nothing in this variable')
                 reports = reports + (0, )
         completed = "true"
         to_db = [(call['ID'], call['Caller ID'], completed, week_id) + reports]
@@ -96,7 +95,6 @@ def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_field
                 else:
                     interaction = interaction + (call[menu],)
             except: #Did not reach this step - realtime analytics
-                print('exception because nothing in this variable')
                 interaction = interaction + (None,)
         to_db = [(call['ID'],) + interaction]
         cur.executemany("INSERT INTO public_interactions (" + ", ".join(['call_id'] + disease_menus) + ") VALUES (" + ", ".join(["?" for atr in ['call_id'] + disease_menus]) + ");", to_db)
@@ -112,10 +110,10 @@ def loadData(data_file_name):
                         'status':'varchar', 'type':'varchar'}
     req_attributes = ['ID', 'Started', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'level_worker']
     # REFRESH
-    cur.execute("DROP TABLE calls;")
-    cur.execute("DROP TABLE hc_reports;")
-    cur.execute("DROP TABLE public_interactions;")
-    helpers.setDiseases([], [], [], [])
+    #cur.execute("DROP TABLE calls;")
+    #cur.execute("DROP TABLE hc_reports;")
+    #cur.execute("DROP TABLE public_interactions;")
+    #helpers.setDiseases([], [], [], [])
     with open(data_file_name, 'rU') as fin: 
         dr = csv.DictReader(fin) 
         for req_attribute in req_attributes:

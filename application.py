@@ -244,14 +244,8 @@ def callback():
     if request.args.get('CallStatus') != None:
         # If there is a callback that is some form of finished
         if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress', 'active']:
-            try:
-                for key in request.args:
-                    print(key + ": " + request.args.get(key))
-            except:
-                print('couldnt print get request')
             call_id = request.args.get('CallSid')
             print('RECIEVED CALLBACK FROM CALL ID ' + call_id)
-            dhelpers.sendEmail("callback", 'RECIEVED CALLBACK FROM CALL ID ' + call_id, None, 'emily.aiken@instedd.org', None, None)
             with open('s.json') as infile:
                 s  = json.load(infile)
             auth_data = { 
@@ -269,8 +263,6 @@ def callback():
             other_public_fields = ['welcome', 'hotline', 'disease', 'nchad']
             hc_fields_available = []
             try:
-                print("DATA FROM API")
-                print(json.loads(call_log_data.text))
                 data = json.loads(call_log_data.text)
                 call_data['Status'] = data['state']
                 call_data['Started'] = data['started_at'] #Need to fix date format
@@ -278,7 +270,6 @@ def callback():
                 for input in json.loads(call_log_data.text)['call_log_answers']:
                     field = input['project_variable_name']
                     value = input['value']
-                    #print(field + ": " + value)
                     call_data[field] = value
                     if (field[-4:] == 'case' or field[-5:] == 'death') and field[:2] == 'va':
                         hc_fields_available.append(field)
@@ -287,14 +278,9 @@ def callback():
                 con = sqlite3.connect('logs115.db')
                 cur = con.cursor()
                 calls_attributes = ['call_id', 'date', 'datenum', 'month', 'year', 'time', 'week_id', 'duration', 'caller_id', 'status', 'type']
-                print("HC FIELDS AVAILABLE: " + ", ".join(hc_fields_available))
-                print("PUBLIC FIELDS AVAILABLE: " + ", ".join(public_fields_available))
-                print("DICT OF INFO: ")
-                print(call_data)
                 uhelpers.insertCallLog(cur, call_data, calls_attributes, public_fields_available, hc_fields_available)
             except:
-                er = sys.exc_info()
-                print(er)
+                print('ERROR WITH CALLBACK')
                 dhelpers.sendEmail("callback error", 'error with callback ' + call_id + ": " + str(er), None, 'emily.aiken@instedd.org', None, None)
             con.commit()
             con.close()
