@@ -129,28 +129,28 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_emails, 
         _, public_diseases, _, _ = helpers.getDiseases()
         chartid = 0
         # Breakdown pie charts
-        ghelpers.hotlineBreakdown(cur, 'all', ["Public Callers", "HC Workers"], [" type='public' ", " type='hc_worker' "], starting_date_string, ending_date_string, duration_string, "Hotline Breakdown", str(chartid) + "hotlinebreakdown.png")
+        ghelpers.hotlineBreakdown(cur, 'all', ["Public Callers", "HC Workers"], [" type='public' ", " type='hc_worker' "], starting_date_string, ending_date_string, duration_string, "Hotline Breakdown", str(chartid).zfill(2) + "hotlinebreakdown.png")
         chartid = chartid + 1
-        ghelpers.hotlineBreakdown(cur, 'public', ["Visit " + disease + " Information" for disease in public_diseases] + ['Make a Report', 'Request More Information', 'Request Ambulance Information'], [disease + "_menu IS NOT NULL" for disease in public_diseases] + ["hotline_menu='2'", "hotline_menu='3'", "hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, "Public Hotline Breakdown", str(chartid) + "publicbreakdown.png")
+        ghelpers.hotlineBreakdown(cur, 'public', ["Visit " + disease + " Information" for disease in public_diseases] + ['Make a Report', 'Request More Information', 'Request Ambulance Information'], [disease + "_menu IS NOT NULL" for disease in public_diseases] + ["hotline_menu='2'", "hotline_menu='3'", "hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, "Public Hotline Breakdown", str(chartid).zfill(2) + "publicbreakdown.png")
         chartid = chartid + 1
         # Line charts and statistics
-        total, avg = ghelpers.publicLineChart(cur, "all", ["call_id != ''"], starting_date_string, ending_date_string, duration_string, ["Calls to Hotline"], "Calls to Hotline by Day", False, str(chartid) + "overview.png")
+        total, avg = ghelpers.publicLineChart(cur, "all", ["call_id != ''"], starting_date_string, ending_date_string, duration_string, ["Calls to Hotline"], "Calls to Hotline by Day", False, str(chartid).zfill(2) + "overview.png")
         chartid = chartid + 1
         parts = appendStats(parts, styles, total, avg, "calls to entire hotline")
-        total, avg = ghelpers.publicLineChart(cur, "all", [" type='public' "], starting_date_string, ending_date_string, duration_string, ["Calls to Public Hotline"], "Calls to Public Hotline by Day", False, str(chartid) + "public.png")
+        total, avg = ghelpers.publicLineChart(cur, "all", [" type='public' "], starting_date_string, ending_date_string, duration_string, ["Calls to Public Hotline"], "Calls to Public Hotline by Day", False, str(chartid).zfill(2) + "public.png")
         chartid = chartid + 1
         parts = appendStats(parts, styles, total, avg, "calls to public hotline")
         for disease in public_diseases:
-            total, avg = ghelpers.publicLineChart(cur, "public", [disease + "_menu IS NOT NULL", disease + "_menu=1", disease + "_menu=2"], starting_date_string, ending_date_string, duration_string, ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"], "Calls to " + disease.title() + " Menu by Day", False, str(chartid) + disease + ".png")
+            total, avg = ghelpers.publicLineChart(cur, "public", [disease + "_menu IS NOT NULL", disease + "_menu=1", disease + "_menu=2"], starting_date_string, ending_date_string, duration_string, ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"], "Calls to " + disease.title() + " Menu by Day", False, str(chartid).zfill(2) + disease + ".png")
             chartid = chartid + 1
             parts = appendStats(parts, styles, total, avg, "visitors to " + disease.title() + " menu")
-        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='2'"], starting_date_string, ending_date_string, duration_string, ["Public Disease Reports"], "Public Disease Reports by Day", False, str(chartid) + "publicreports.png")
+        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='2'"], starting_date_string, ending_date_string, duration_string, ["Public Disease Reports"], "Public Disease Reports by Day", False, str(chartid).zfill(2) + "publicreports.png")
         chartid = chartid + 1
         parts = appendStats(parts, styles, total, avg, "public disease reports")
-        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='3'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Additional Information"], "Cals Requesting Additional Information by Day", False, str(chartid) + "moreinfo.png")
+        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='3'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Additional Information"], "Cals Requesting Additional Information by Day", False, str(chartid).zfill(2) + "moreinfo.png")
         chartid = chartid + 1
         parts = appendStats(parts, styles, total, avg, "calls requesting additional information")
-        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Ambulance Information"], "Cals Requesting Ambulance Information by Day", False, str(chartid) + "ambulance.png")
+        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Ambulance Information"], "Cals Requesting Ambulance Information by Day", False, str(chartid).zfill(2) + "ambulance.png")
         parts = appendStats(parts, styles, total, avg, "calls requesting ambulance information")
         con.close()
         print('creating graphs pdf', file=sys.stderr)

@@ -188,7 +188,8 @@ def download():
     charts = helpers.getCharts()
     for i in range (0, len(charts)):
         chart = charts[i]
-        charts_with_ids.append((str(i) + chart[0], chart[1], chart[2]))
+        print(str(i).zfill(2))
+        charts_with_ids.append((str(i).zfill(2) + chart[0], chart[1], chart[2]))
     print(charts_with_ids)
     return render_template("download.html", redirect_string = "/downloading?datestart=" + starting_date_string + "&dateend=" + ending_date_string, figureoptions=charts_with_ids)
 
@@ -279,6 +280,7 @@ def callback():
                 print(result)
             except:
                 er = sys.exc_info()
+                print('ERROR INSERTING TO DB')
                 dhelpers.sendEmail("callback error", 'error with callback ' + call_id + ": " + str(er), None, 'emily.aiken@instedd.org', None, None)
     response = app.response_class(status=200)
     return response

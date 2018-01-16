@@ -6,6 +6,7 @@ import datetime
 import helpers
 import json
 
+# Defines the max attributes in each table in the DB
 def tbl_atr():
     all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
     call_atr = ['call_id', 'date', 'datenum', 'month', 'year', 'time', 'week_id', 'duration', 'caller_id', 'status', 'type']
@@ -13,6 +14,7 @@ def tbl_atr():
     hc_atr = ['call_id', 'caller_id', 'week_id'] + all_hc
     return call_atr, public_atr, hc_atr
 
+# Gives types (in dict form) for all possible attributes available in each table in the DB
 def tbl_atr_types():
     # Get the attributes themselves
     call_atr, public_atr, hc_atr = tbl_atr()
@@ -58,6 +60,8 @@ def removeAnonymous(caller_id):
 
 # Deletes stars at end of disease reports
 def deleteStar(disease_report):
+    if disease_report is None:
+        return 0
     for i in range(len(disease_report)):
         if disease_report[i] == "*":
             return disease_report[0:i]
@@ -129,6 +133,7 @@ def availableFields(call_log_vars):
             public_fields_available.append(field.split("_")[0])
     return public_fields_available, hc_fields_available
 
+# Given the fields available in a call's schema, identify any new public/HC fields and edit global settings accordingly
 def addNewFields(cur, public_fields_available, hc_fields_available):
     all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
     new_public_diseases = [disease for disease in public_fields_available if disease not in all_public]
@@ -141,6 +146,7 @@ def addNewFields(cur, public_fields_available, hc_fields_available):
         all_public, chosen_public, all_hc, chosen_hc = helpers.setDiseases(all_public, chosen_public, all_hc + [disease], chosen_hc + [disease])
     return new_public_diseases, new_hc_diseases
 
+# Insert a call log given the data (dictionary), the public fields available in the log, and the HC fields available in the log
 def insertCallLog(cur, call, public_fields_available, hc_fields_available):
     # Get time and date from 'started' field
     dateTime = parseDateTime(call['Started'])
@@ -189,6 +195,7 @@ def insertCallLog(cur, call, public_fields_available, hc_fields_available):
         to_db = [(call['ID'],) + interaction]
         cur.executemany("INSERT INTO public_interactions (" + ", ".join(['call_id'] + disease_menus) + ") VALUES (" + ", ".join(["?" for atr in ['call_id'] + disease_menus]) + ");", to_db)
 
+# Load set of call logs in from CSV
 def loadCsv(data_file_name):
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
@@ -227,6 +234,7 @@ def loadCsv(data_file_name):
         new_hc_msg = "New public diseases detected: " + str.title(", ".join(hc_disease_titles)) + "."
     return num_loaded_msg, new_public_msg, new_hc_msg
 
+# Load single call log in (i.e. from callback)
 def loadLog(calldict):
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
@@ -244,52 +252,3 @@ def loadLog(calldict):
         con.commit()
         con.close()
         return "Successfully loaded into DB"
-
-def oldcallback():
-    # Check to make sure we are not acessing the page in a browser
-    if request.args.get('CallStatus') != None:
-        # If there is a callback that is some form of finished
-        if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress', 'active']:
-            call_id = request.args.get('CallSid')
-            print('RECIEVED CALLBACK FROM CALL ID ' + call_id)
-            with open('s.json') as infile:
-                s  = json.load(infile)
-            auth_data = { 
-                    "account": {
-                        "email": base64.b64decode(s["vbu"]),
-                        "password": base64.b64decode(s["vbp"])
-                    }
-                }
-            headers = {'content-type': 'application/json'}
-            authorize = requests.post("http://203.223.33.249:8081/api2/auth", headers=headers, data=json.dumps(auth_data))
-            token = json.loads(authorize.text)['auth_token']
-            call_log_data = requests.get('http://203.223.33.249:8081/api2/call_logs/' + call_id + '?email=' + urllib.quote(base64.b64decode(s["vbu"]), safe='') + '&token=' + token) 
-            call_data = {'ID':call_id, 'Duration(second)': request.args.get('CallDuration')}
-            public_fields_available = []
-            other_public_fields = ['welcome', 'hotline', 'disease', 'nchad']
-            hc_fields_available = []
-            try:
-                data = json.loads(call_log_data.text)
-                call_data['Status'] = data['state']
-                call_data['Started'] = data['started_at'] #Let's use the one from the callback rather than the API
-                call_data['Caller ID'] = data['address']
-                print(json.loads(call_log_data.text))
-                for input in json.loads(call_log_data.text)['call_log_answers']:
-                    field = input['project_variable_name']
-                    value = input['value']
-                    call_data[field] = value
-                    if (field[-4:] == 'case' or field[-5:] == 'death') and field[:2] == 'va':
-                        hc_fields_available.append(field)
-                    elif field[-4:] == 'menu' and not field.split("_")[0] in other_public_fields and not field.split("_")[0] in public_fields_available:
-                        public_fields_available.append(field.split("_")[0])
-                con = sqlite3.connect('logs115.db')
-                cur = con.cursor()
-                uhelpers.insertCallLog(cur, call_data, public_fields_available, hc_fields_available)
-            except:
-                print('ERROR WITH CALLBACK')
-                dhelpers.sendEmail("callback error", 'error with callback ' + call_id + ": " + str(er), None, 'emily.aiken@instedd.org', None, None)
-            con.commit()
-            con.close()
-    response = app.response_class(status=200)
-    return response
-
