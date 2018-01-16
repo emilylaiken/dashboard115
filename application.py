@@ -265,8 +265,9 @@ def callback():
             try:
                 data = json.loads(call_log_data.text)
                 call_data['Status'] = data['state']
-                call_data['Started'] = data['started_at'] #Need to fix date format
+                call_data['Started'] = data['started_at'] 
                 call_data['Caller ID'] = data['address']
+                print(json.loads(call_log_data.text))
                 for input in json.loads(call_log_data.text)['call_log_answers']:
                     field = input['project_variable_name']
                     value = input['value']
@@ -277,8 +278,7 @@ def callback():
                         public_fields_available.append(field.split("_")[0])
                 con = sqlite3.connect('logs115.db')
                 cur = con.cursor()
-                calls_attributes = ['call_id', 'date', 'datenum', 'month', 'year', 'time', 'week_id', 'duration', 'caller_id', 'status', 'type']
-                uhelpers.insertCallLog(cur, call_data, calls_attributes, public_fields_available, hc_fields_available)
+                uhelpers.insertCallLog(cur, call_data, public_fields_available, hc_fields_available)
             except:
                 print('ERROR WITH CALLBACK')
                 dhelpers.sendEmail("callback error", 'error with callback ' + call_id + ": " + str(er), None, 'emily.aiken@instedd.org', None, None)
@@ -300,7 +300,7 @@ def dataload():
         filename = secure_filename(csv.filename)
         csv.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         # Upload data from the saved file to the dashboard
-        uploaded_msg, new_public_msg, new_hc_msg = uhelpers.loadData("uploads/" + filename)
+        uploaded_msg, new_public_msg, new_hc_msg = uhelpers.loadCsv("uploads/" + filename)
         if uploaded_msg[0] != 'N':
             return render_template("uploadfail.html", message=uploaded_msg)
     else:
