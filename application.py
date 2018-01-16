@@ -244,6 +244,11 @@ def callback():
     if request.args.get('CallStatus') != None:
         # If there is a callback that is some form of finished
         if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress']:
+            try:
+                for key in request.args:
+                    print(request.args.get(key))
+            except:
+                print('couldnt print get request')
             call_id = request.args.get('CallSid')
             print('RECIEVED CALLBACK FROM CALL ID ' + call_id)
             dhelpers.sendEmail("callback", 'RECIEVED CALLBACK FROM CALL ID ' + call_id, None, 'emily.aiken@instedd.org', None, None)
