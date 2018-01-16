@@ -243,7 +243,7 @@ def callback():
     # Check to make sure we are not acessing the page in a browser
     if request.args.get('CallStatus') != None:
         # If there is a callback that is some form of finished
-        if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress']:
+        if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress', 'active']:
             try:
                 for key in request.args:
                     print(key + ": " + request.args.get(key))
