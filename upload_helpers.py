@@ -41,6 +41,7 @@ def parseDateTime(fulldate):
     elif "Z" in fulldate: #Realtime callback format
         try:
             fulldate = fulldate[0:10] + " " + fulldate[11:19]
+            print('here0')
             datestamp = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S') 
             print('here1')
             datestamp_cambodia = datestamp + datetime.timedelta(hours=7) #Can do this more elegantly
