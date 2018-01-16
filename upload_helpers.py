@@ -78,7 +78,8 @@ def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_field
                     reports = reports + (deleteStar(call[var]),)
                     report_something = "true"
             except: #Did not enter any of this disease - realtime callback
-                report = reports + (0, )
+                print('exception because nothing in this variable')
+                reports = reports + (0, )
         completed = "true"
         to_db = [(call['ID'], call['Caller ID'], completed, week_id) + reports]
         hc_attributes = ['call_id', 'caller_id', 'completed', 'week_id'] + hc_fields_available
@@ -95,6 +96,7 @@ def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_field
                 else:
                     interaction = interaction + (call[menu],)
             except: #Did not reach this step - realtime analytics
+                print('exception because nothing in this variable')
                 interaction = interaction + (None,)
         to_db = [(call['ID'],) + interaction]
         cur.executemany("INSERT INTO public_interactions (" + ", ".join(['call_id'] + disease_menus) + ") VALUES (" + ", ".join(["?" for atr in ['call_id'] + disease_menus]) + ");", to_db)
