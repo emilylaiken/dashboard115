@@ -232,13 +232,17 @@ def loadLog(calldict):
     cur = con.cursor()
     schema = [key for key, value in calldict]
     if checkReqAtr(schema) == False:
+        con.close()
         return "Missing required attribute"
     public_fields_available, hc_fields_available = availableFields(schema)
     new_public_diseases, new_hc_diseases = addNewFields(cur, public_fields_available, hc_fields_available) 
     if checkDuplicateLogs(cur, calldict['ID']) == True:
+        con.close()
         return "Duplicate call"
     else:
         insertCallLog(cur, call, public_fields_available, hc_fields_available)
+        con.commit()
+        con.close()
         return "Successfully loaded into DB"
 
 def oldcallback():
