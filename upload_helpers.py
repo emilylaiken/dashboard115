@@ -228,25 +228,22 @@ def loadCsv(data_file_name):
     return num_loaded_msg, new_public_msg, new_hc_msg
 
 def loadLog(calldict):
-    try:
-        con = sqlite3.connect("logs115.db")
-        cur = con.cursor()
-        schema = [key for key, value in calldict.iteritems()]
-        if checkReqAtr(schema) == False:
-            con.close()
-            return "Missing required attribute"
-        public_fields_available, hc_fields_available = availableFields(schema)
-        new_public_diseases, new_hc_diseases = addNewFields(cur, public_fields_available, hc_fields_available) 
-        if checkDuplicateLogs(cur, calldict['ID']) == True:
-            con.close()
-            return "Duplicate call"
-        else:
-            insertCallLog(cur, call, public_fields_available, hc_fields_available)
-            con.commit()
-            con.close()
-            return "Successfully loaded into DB"
-    except:
-        return "error"
+    con = sqlite3.connect("logs115.db")
+    cur = con.cursor()
+    schema = [key for key, value in calldict.iteritems()]
+    if checkReqAtr(schema) == False:
+        con.close()
+        return "Missing required attribute"
+    public_fields_available, hc_fields_available = availableFields(schema)
+    new_public_diseases, new_hc_diseases = addNewFields(cur, public_fields_available, hc_fields_available) 
+    if checkDuplicateLogs(cur, calldict['ID']) == True:
+        con.close()
+        return "Duplicate call"
+    else:
+        insertCallLog(cur, call, public_fields_available, hc_fields_available)
+        con.commit()
+        con.close()
+        return "Successfully loaded into DB"
 
 def oldcallback():
     # Check to make sure we are not acessing the page in a browser
