@@ -264,6 +264,7 @@ def callback():
             other_public_fields = ['welcome', 'hotline', 'disease', 'nchad']
             hc_fields_available = []
             try:
+                print(json.loads(call_log_data.text))
                 for input in json.loads(call_log_data.text)['call_log_answers']:
                     field = input['project_variable_name']
                     value = input['value']
