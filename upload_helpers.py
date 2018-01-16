@@ -42,11 +42,12 @@ def parseDateTime(fulldate):
         try:
             fulldate = fulldate[0:10] + " " + fulldate[11:19]
             datestamp = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S') 
+            print('here1')
             datestamp_cambodia = datestamp + datetime.timedelta(hours=7) #Can do this more elegantly
+            print('here')
             date = datetime.datetime.strftime(datestamp_cambodia, '%Y-%m-%d')
             print("DATE:" + date)
             time = datetime.datetime.strftime(datestamp_cambodia, '%H:%M:%S')
-            print("TIME:" + time)
         except:
             print('problem with date')
             return "", ""
