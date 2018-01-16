@@ -33,13 +33,21 @@ def parseDuration(duration_start, duration_end):
 
 # Wrapper for line chart that is used to build ontime vs. late chart used on HC reports page
 def hcOntimeChart(cur, starting_date_string, ending_date_string):
-    cur.execute("SELECT week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) == 2 OR CAST(strftime('%w', date) as integer) == 3)) GROUP BY week_id ORDER BY week_id asc;")
+    cur.execute("SELECT calls.week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) == 2 OR CAST(strftime('%w', date) as integer) == 3)) GROUP BY calls.week_id ORDER BY calls.week_id asc;")
     completed_reports_by_week = cur.fetchall()
-    cur.execute("SELECT week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) < 2 OR CAST(strftime('%w', date) as integer) > 3)) GROUP BY week_id ORDER BY week_id asc;")
+    cur.execute("SELECT calls.week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) < 2 OR CAST(strftime('%w', date) as integer) > 3)) GROUP BY calls.week_id ORDER BY calls.week_id asc;")
     attempted_reports_by_week = cur.fetchall()
     weeks = column(completed_reports_by_week, 0)
     completed = column(completed_reports_by_week, 1)
     attempted = column(attempted_reports_by_week, 1)
+    weeklabels = []
+    for week in weeks:
+        beginning_of_week = datetime.datetime.strptime(week[-8:], '%y-%m-%d')
+        end_of_week = beginning_of_week + datetime.timedelta(days=6)
+        if beginning_of_week.month == end_of_week.month: 
+            weeklabels.append(beginning_of_week.strftime('%b') + " " + beginning_of_week.strftime('%d') + " - " + end_of_week.strftime('%d') + ", " + beginning_of_week.strftime('%Y'))
+        else:
+            weeklabels.append(beginning_of_week.strftime('%b %d, %Y') + " - " + end_of_week.strftime('%b %d, %Y'))
     return lineChart(weeks, [completed, attempted], ["On-Time Reports", "Late Reports"], palette[0:2], "HC Reports by Week - On-Time vs. Late", True, "None", "None", "completeness") + ("", "")
 
 # Wrapper for line chart used to build two HC reports charts (one for cases, one for deaths) on HC reports page
@@ -53,7 +61,7 @@ def hcDiseaseChart(cur, starting_date_string, ending_date_string, addon):
         reports[disease] = []
     reports['dates'] = []
     # Query database for sum of reports of each disease eah week
-    cur.execute("SELECT week_id, " + ", ".join(["sum(" + disease + ")" for disease in diseases]) + " FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + " GROUP BY week_id;")
+    cur.execute("SELECT calls.week_id, " + ", ".join(["sum(" + disease + ")" for disease in diseases]) + " FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + " GROUP BY calls.week_id;")
     weeks = cur.fetchall()
     # Write sums from SQL query into database
     for week in weeks:

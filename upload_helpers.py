@@ -51,7 +51,7 @@ def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_field
         days_since_wed = day_of_week + 5
     else:
         days_since_wed = day_of_week - 2
-    week_id = "Week of " + datetime.datetime.strftime(datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=days_since_wed), '%y-%m-%d')
+    week_id = datetime.datetime.strftime(datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=days_since_wed), '%y-%m-%d')
     datenum = helpers.dtoi(date)
     # Decide which type of call it is--HC worker or public
     call_type = 'public'
@@ -72,9 +72,10 @@ def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_field
         completed = "false"
         if ((call['cdc_report_started'] == '1' and call['cdc_report_ended'] == '1') or (call['cdc_report_started'] != '1' and report_something == "true")):
             completed = "true"
-        to_db = [(call['ID'], completed) + reports]
-        hc_attributes = ['call_id', 'completed'] + hc_fields_available
+        to_db = [(call['ID'], call['Caller ID'], completed, week_id) + reports]
+        hc_attributes = ['call_id', 'caller_id', 'completed', 'week_id'] + hc_fields_available
         cur.executemany("INSERT INTO hc_reports (" + ", ".join(hc_attributes) + ") VALUES (" + ", ".join(["?" for atr in hc_attributes]) + ");", to_db)
+        #cur.execute("UPDATE hc_reports SET " +  ", ".join([field + " = 0" for field in hc_fields_available]) + " WHERE caller_id = " + call['Caller ID'] + " AND week_id = " + week_id + ";")
         # Record public interaction with menus
     else:
         disease_menus = ['hotline_menu', 'disease_menu'] + [disease + "_menu" for disease in public_fields_available]
@@ -123,12 +124,12 @@ def loadData(data_file_name):
         new_public_diseases = [disease for disease in public_fields_available if disease not in all_public]
         new_hc_diseases = [disease for disease in hc_fields_available if disease not in all_hc]
         # Define attributes for each table
-        hc_attributes = ['call_id', 'completed'] + hc_fields_available
+        hc_attributes = ['call_id', 'caller_id', 'completed', 'week_id'] + hc_fields_available
         hc_attributes_types = {}
         for atr in hc_attributes:
             if atr == 'call_id':
                 hc_attributes_types[atr] = 'integer primary key'
-            elif atr == 'completed':
+            elif atr == 'completed' or atr == 'caller_id' or atr == 'week_id':
                 hc_attributes_types[atr] = 'varchar'
             else:
                 hc_attributes_types[atr] = 'integer'

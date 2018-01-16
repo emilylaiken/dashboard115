@@ -54,7 +54,7 @@ def getDiseases():
     with open('settings.json') as infile:
         settings  = json.load(infile)
         return [str(disease) for disease in settings['all_public']], [str(disease) for disease in settings['chosen_public']], [str(disease) for disease in settings['all_hc']], [str(disease) for disease in settings['chosen_hc']]
-
+        
 # Capitalize a string -- used as Jinja environment filter
 def capitalize(s):
     return str.title(s)

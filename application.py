@@ -104,6 +104,9 @@ def overview():
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
     # Parse duration and dates from URL parameters
+    #cur.execute('SELECT calls.week_id, calls.caller_id, status, var_respiratory_death FROM calls JOIN hc_reports on calls.call_id=hc_reports.call_id WHERE var_respiratory_death > 100;')
+    #results = cur.fetchall()
+    #print(results)
     duration_string, title_addon = ghelpers.parseDuration(request.args.get('durationstart'), request.args.get('durationend'))
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
@@ -243,6 +246,7 @@ def callback():
         if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress']:
             call_id = request.args.get('CallSid')
             print('RECIEVED CALLBACK FROM CALL ID ' + call_id)
+            dhelpers.sendEmail("callback", 'RECIEVED CALLBACK FROM CALL ID ' + call_id, None, 'emily.aiken@instedd.org', None, None)
             with open('s.json') as infile:
                 s  = json.load(infile)
             auth_data = { 
@@ -252,26 +256,31 @@ def callback():
                     }
                 }
             headers = {'content-type': 'application/json'}
-            authorize = requests.post("http://verboice.com/api2/auth", headers=headers, data=json.dumps(auth_data))
+            authorize = requests.post("http://203.223.33.249:8081/api2/auth", headers=headers, data=json.dumps(auth_data))
             token = json.loads(authorize.text)['auth_token']
-            call_log_data = requests.get('http://verboice.com/api2/call_logs/' + call_id + '?email=' + urllib.quote(base64.b64decode(s["vbu"]), safe='') + '&token=' + token)
+            call_log_data = requests.get('http://203.223.33.249:8081/api2/call_logs/' + call_id + '?email=' + urllib.quote(base64.b64decode(s["vbu"]), safe='') + '&token=' + token) 
             call_data = {}
             public_fields_available = []
             other_public_fields = ['welcome', 'hotline', 'disease', 'nchad']
             hc_fields_available = []
-            for input in json.loads(call_log_data.text)['call_log_answers']:
-                field = input['project_variable_name']
-                value = input['value']
-                print(field + ": " + value)
-                call_data[field] = value
-                if (field[-4:] == 'case' or field[-5:] == 'death') and field[:2] == 'va':
-                    hc_fields_available.append(field)
-                elif field[-4:] == 'menu' and not field.split("_")[0] in other_public_fields and not field.split("_")[0] in public_fields_available:
-                    public_fields_available.append(field.split("_")[0])
-            con = sqlite3.connect('logs115.db')
-            cur = con.cursor()
-            calls_attributes = ['call_id', 'date', 'datenum', 'month', 'year', 'time', 'week_id', 'duration', 'caller_id', 'status', 'type']
-            uhelpers.insertCallLog(cur, call_data, calls_attributes, public_fields_available, hc_fields_available)
+            try:
+                for input in json.loads(call_log_data.text)['call_log_answers']:
+                    field = input['project_variable_name']
+                    value = input['value']
+                    print(field + ": " + value)
+                    call_data[field] = value
+                    if (field[-4:] == 'case' or field[-5:] == 'death') and field[:2] == 'va':
+                        hc_fields_available.append(field)
+                    elif field[-4:] == 'menu' and not field.split("_")[0] in other_public_fields and not field.split("_")[0] in public_fields_available:
+                        public_fields_available.append(field.split("_")[0])
+                con = sqlite3.connect('logs115.db')
+                cur = con.cursor()
+                calls_attributes = ['call_id', 'date', 'datenum', 'month', 'year', 'time', 'week_id', 'duration', 'caller_id', 'status', 'type']
+                uhelpers.insertCallLog(cur, call_data, calls_attributes, public_fields_available, hc_fields_available)
+            except:
+                er = sys.exc_info()
+                print(er)
+                dhelpers.sendEmail("callback error", 'error with callback ' + call_id + ": " + str(er), None, 'emily.aiken@instedd.org', None, None)
             con.commit()
             con.close()
     response = app.response_class(status=200)
