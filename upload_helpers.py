@@ -112,10 +112,10 @@ def loadData(data_file_name):
                         'status':'varchar', 'type':'varchar'}
     req_attributes = ['ID', 'Started', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'level_worker']
     # REFRESH
-    #cur.execute("DROP TABLE calls;")
-    #cur.execute("DROP TABLE hc_reports;")
-    #cur.execute("DROP TABLE public_interactions;")
-    #helpers.setDiseases([], [], [], [])
+    cur.execute("DROP TABLE calls;")
+    cur.execute("DROP TABLE hc_reports;")
+    cur.execute("DROP TABLE public_interactions;")
+    helpers.setDiseases([], [], [], [])
     with open(data_file_name, 'rU') as fin: 
         dr = csv.DictReader(fin) 
         for req_attribute in req_attributes:
@@ -145,7 +145,7 @@ def loadData(data_file_name):
             elif atr == 'completed' or atr == 'caller_id' or atr == 'week_id':
                 hc_attributes_types[atr] = 'varchar'
             else:
-                hc_attributes_types[atr] = 'integer'
+                hc_attributes_types[atr] = 'integer default 0'
         public_attributes = {'call_id':'integer primary key', 'hotline_menu':'integer', 'disease_menu':'integer'}
         for disease in public_fields_available:
             public_attributes[disease + '_menu'] = 'integer'
