@@ -273,7 +273,11 @@ def callback():
                 dhelpers.sendEmail("callback error", 'error with callback ' + call_id + ": " + str(er), None, 'emily.aiken@instedd.org', None, None)
                 response = app.response_class(status=200)
                 return response
-            print(uhelpers.loadLog(call_data))
+            result = uhelpers.loadLog(call_data)
+            print(result)
+            if result == 'error':
+                print('ERROR WITH CALLBACK')
+                dhelpers.sendEmail("callback error", 'error with callback ' + call_id + ": not known", None, 'emily.aiken@instedd.org', None, None)
     response = app.response_class(status=200)
     return response
 
