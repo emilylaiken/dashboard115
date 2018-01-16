@@ -39,20 +39,11 @@ def parseDateTime(fulldate):
                 forwards_date = year + '-' + month + '-' + day
                 return forwards_date, fulldate[i:len(fulldate)]
     elif "Z" in fulldate: #Realtime callback format
-        try:
-            fulldate = fulldate[0:10] + " " + fulldate[11:19]
-            print('here0')
-            print(fulldate)
-            datestamp = datetime.datetime.strptime(fulldate, '%Y-%m-%d %H:%M:%S') 
-            print('here1')
-            datestamp_cambodia = datestamp + datetime.timedelta(hours=7) #Can do this more elegantly
-            print('here')
-            date = datetime.datetime.strftime(datestamp_cambodia, '%Y-%m-%d')
-            print("DATE:" + date)
-            time = datetime.datetime.strftime(datestamp_cambodia, '%H:%M:%S')
-        except:
-            print('problem with date')
-            return "", ""
+        fulldate = fulldate[0:10] + " " + fulldate[11:19]
+        datestamp = datetime.datetime.strptime(fulldate, '%Y-%m-%d %H:%M:%S') 
+        datestamp_cambodia = datestamp + datetime.timedelta(hours=7) #Can do this more elegantly
+        date = datetime.datetime.strftime(datestamp_cambodia, '%Y-%m-%d')
+        time = datetime.datetime.strftime(datestamp_cambodia, '%H:%M:%S')
         return date, time
     return "", ""
 

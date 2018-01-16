@@ -287,6 +287,10 @@ def callback():
                 con = sqlite3.connect('logs115.db')
                 cur = con.cursor()
                 calls_attributes = ['call_id', 'date', 'datenum', 'month', 'year', 'time', 'week_id', 'duration', 'caller_id', 'status', 'type']
+                print("HC FIELDS AVAILABLE: " + ", ".join(hc_fields_available))
+                print("PUBLIC FIELDS AVAILABLE: " + ", ".join(public_fields_available))
+                print("DICT OF INFO: ")
+                print(call_data)
                 uhelpers.insertCallLog(cur, call_data, calls_attributes, public_fields_available, hc_fields_available)
             except:
                 er = sys.exc_info()
