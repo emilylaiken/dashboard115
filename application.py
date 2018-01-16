@@ -246,7 +246,7 @@ def callback():
         if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress']:
             try:
                 for key in request.args:
-                    print(request.args.get(key))
+                    print(key + ": " + request.args.get(key))
             except:
                 print('couldnt print get request')
             call_id = request.args.get('CallSid')
