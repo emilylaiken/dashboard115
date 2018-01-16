@@ -227,99 +227,65 @@ def loadCsv(data_file_name):
         new_hc_msg = "New public diseases detected: " + str.title(", ".join(hc_disease_titles)) + "."
     return num_loaded_msg, new_public_msg, new_hc_msg
 
-
-# Given the CSV file name, loads the call logs into memory (if they are not duplicates of previously loaded logs)
-def altLoad(data_file_name):
-    # Check that all required variables are present
+def loadLog(calldict):
     con = sqlite3.connect("logs115.db")
     cur = con.cursor()
-    calls_attributes = ['call_id', 'date', 'datenum', 'month', 'year', 'time', 'week_id', 'duration', 'caller_id', 'status', 'type']
-    calls_attributes_types = {'call_id':'integer primary key', 'date':'varchar', 'datenum': 'integer', 'month': 'varchar', 'year':'varchar', 'time':'time', 'week_id':'varchar', 'duration':'integer', 'caller_id':'integer', 
-                        'status':'varchar', 'type':'varchar'}
-    req_attributes = ['ID', 'Started', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'level_worker']
-    # REFRESH
-    #cur.execute("DROP TABLE calls;")
-    #cur.execute("DROP TABLE hc_reports;")
-    #cur.execute("DROP TABLE public_interactions;")
-    #helpers.setDiseases([], [], [], [])
-    with open(data_file_name, 'rU') as fin: 
-        dr = csv.DictReader(fin) 
-        for req_attribute in req_attributes:
-            if req_attribute not in dr.fieldnames:
-                return "Missing attribute: " + req_attribute, "", ""
-        # Record which diseases are available, add to records if there are new ones
-        hc_fields_available = []
-        public_fields_available = []
-        other_public_fields = ['welcome', 'hotline', 'disease', 'nchad']
-        for field in dr.fieldnames:
-            # Search for HC worker diseases--begin with 'va' and end with 'case' or 'death'
-            if (field[-4:] == 'case' or field[-5:] == 'death') and field[:2] == 'va':
-                hc_fields_available.append(field)
-            # Search for public diseases--end with 'menu'
-            elif field[-4:] == 'menu' and not field.split("_")[0] in other_public_fields and not field.split("_")[0] in public_fields_available:
-                public_fields_available.append(field.split("_")[0])
-        # Add new records to settings JSON
-        all_public, chosen_public, all_hc, chosen_hc = helpers.getDiseases()
-        new_public_diseases = [disease for disease in public_fields_available if disease not in all_public]
-        new_hc_diseases = [disease for disease in hc_fields_available if disease not in all_hc]
-        # Define attributes for each table
-        hc_attributes = ['call_id', 'caller_id', 'completed', 'week_id'] + hc_fields_available
-        hc_attributes_types = {}
-        for atr in hc_attributes:
-            if atr == 'call_id':
-                hc_attributes_types[atr] = 'integer primary key'
-            elif atr == 'completed' or atr == 'caller_id' or atr == 'week_id':
-                hc_attributes_types[atr] = 'varchar'
-            else:
-                hc_attributes_types[atr] = 'integer default 0'
-        public_attributes = {'call_id':'integer primary key', 'hotline_menu':'integer', 'disease_menu':'integer'}
-        for disease in public_fields_available:
-            public_attributes[disease + '_menu'] = 'integer'
-        # Create tables if needed, alter if new disease has been added
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='calls';")
-        tables = cur.fetchall()
-        cur.execute("CREATE TABLE IF NOT EXISTS calls (" + ", ".join([atr + " " + calls_attributes_types[atr] for atr in calls_attributes]) + ");")
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_date ON calls (datenum);")
-        cur.execute("CREATE TABLE IF NOT EXISTS hc_reports (" + ", ".join([key + " " + value for key, value in hc_attributes_types.iteritems()]) + ");")
-        cur.execute("CREATE TABLE IF NOT EXISTS public_interactions (" + ", ".join([key + " " + value for key, value in public_attributes.iteritems()]) + ");")        # Insert columns if there are any new diseases
-        for disease in new_public_diseases:
-            if tables != []:
-                cur.execute("ALTER TABLE public_interactions ADD " + disease + "_menu integer;")
-            all_public, chosen_public, all_hc, chosen_hc = helpers.setDiseases(all_public + [disease], chosen_public + [disease], all_hc, chosen_hc)
-        for disease in new_hc_diseases:
-            if tables != []:
-                cur.execute("ALTER TABLE hc_reports ADD " + disease + " integer;")
-            all_public, chosen_public, all_hc, chosen_hc = helpers.setDiseases(all_public, chosen_public, all_hc + [disease], chosen_hc + [disease])
-        numInserted = 0
-        numDuplicates = 0
-        # Read in calls
-        prev_date = ""
-        week_id = ""
-        for call in dr:
-            # Record general info--call ID, date, time, caller ID, status, level of worker, and cdc report confirmations
-            if call['ID'] == "": # If we are passed the end of the call records, stop
-                break
-            cur.execute("SELECT * FROM calls WHERE call_id = " + "'" + call['ID'] + "'");
-            duplicate_calls = cur.fetchall()
-            if len(duplicate_calls) == 0:
-                insertCallLog(cur, call, calls_attributes, public_fields_available, hc_fields_available)
-                numInserted = numInserted + 1
-            else:
-                numDuplicates = numDuplicates + 1
-    con.commit()
-    con.close()
-    # Messages to print on HTML template: number of calls inserted/duplicates, new public diseases detected, new HC diseases detected
-    num_loaded_msg = "Number of call logs successfully loaded: " + str(numInserted) + ". Number of duplicates (not loaded): " + str(numDuplicates)+ "."
-    new_public_msg = ""
-    if len(new_public_diseases) == 0:
-        new_public_msg = "New public diseases detected: None."
+    schema = [key for key, value in calldict]
+    if checkReqAtr(schema) == False:
+        return "Missing required attribute"
+    public_fields_available, hc_fields_available = availableFields(schema)
+    new_public_diseases, new_hc_diseases = addNewFields(cur, public_fields_available, hc_fields_available) 
+    if checkDuplicateLogs(cur, calldict['ID']) == True:
+        return "Duplicate call"
     else:
-        new_public_msg = "New public diseases detected: " + str.title(", ".join(new_public_diseases)) + "."
-    new_hc_msg = ""
-    if len(new_hc_diseases) == 0:
-        new_hc_msg = "New HC diseases detected: None."
-    else:
-        hc_disease_titles = [str.title(disease.split('_')[1] + " " + disease.split('_')[2]) for disease in new_hc_diseases]
-        new_hc_msg = "New public diseases detected: " + str.title(", ".join(hc_disease_titles)) + "."
-    return num_loaded_msg, new_public_msg, new_hc_msg
+        insertCallLog(cur, call, public_fields_available, hc_fields_available)
+        return "Successfully loaded into DB"
+
+def oldcallback():
+    # Check to make sure we are not acessing the page in a browser
+    if request.args.get('CallStatus') != None:
+        # If there is a callback that is some form of finished
+        if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress', 'active']:
+            call_id = request.args.get('CallSid')
+            print('RECIEVED CALLBACK FROM CALL ID ' + call_id)
+            with open('s.json') as infile:
+                s  = json.load(infile)
+            auth_data = { 
+                    "account": {
+                        "email": base64.b64decode(s["vbu"]),
+                        "password": base64.b64decode(s["vbp"])
+                    }
+                }
+            headers = {'content-type': 'application/json'}
+            authorize = requests.post("http://203.223.33.249:8081/api2/auth", headers=headers, data=json.dumps(auth_data))
+            token = json.loads(authorize.text)['auth_token']
+            call_log_data = requests.get('http://203.223.33.249:8081/api2/call_logs/' + call_id + '?email=' + urllib.quote(base64.b64decode(s["vbu"]), safe='') + '&token=' + token) 
+            call_data = {'ID':call_id, 'Duration(second)': request.args.get('CallDuration')}
+            public_fields_available = []
+            other_public_fields = ['welcome', 'hotline', 'disease', 'nchad']
+            hc_fields_available = []
+            try:
+                data = json.loads(call_log_data.text)
+                call_data['Status'] = data['state']
+                call_data['Started'] = data['started_at'] #Let's use the one from the callback rather than the API
+                call_data['Caller ID'] = data['address']
+                print(json.loads(call_log_data.text))
+                for input in json.loads(call_log_data.text)['call_log_answers']:
+                    field = input['project_variable_name']
+                    value = input['value']
+                    call_data[field] = value
+                    if (field[-4:] == 'case' or field[-5:] == 'death') and field[:2] == 'va':
+                        hc_fields_available.append(field)
+                    elif field[-4:] == 'menu' and not field.split("_")[0] in other_public_fields and not field.split("_")[0] in public_fields_available:
+                        public_fields_available.append(field.split("_")[0])
+                con = sqlite3.connect('logs115.db')
+                cur = con.cursor()
+                uhelpers.insertCallLog(cur, call_data, public_fields_available, hc_fields_available)
+            except:
+                print('ERROR WITH CALLBACK')
+                dhelpers.sendEmail("callback error", 'error with callback ' + call_id + ": " + str(er), None, 'emily.aiken@instedd.org', None, None)
+            con.commit()
+            con.close()
+    response = app.response_class(status=200)
+    return response
 

@@ -240,7 +240,6 @@ def upload():
 
 @app.route("/callback", methods=["GET"])
 def callback():
-    # Check to make sure we are not acessing the page in a browser
     if request.args.get('CallStatus') != None:
         # If there is a callback that is some form of finished
         if not request.args.get('CallStatus') in ['queued', 'initiated', 'ringing', 'in-progress', 'active']:
@@ -249,43 +248,35 @@ def callback():
             with open('s.json') as infile:
                 s  = json.load(infile)
             auth_data = { 
-                    "account": {
-                        "email": base64.b64decode(s["vbu"]),
-                        "password": base64.b64decode(s["vbp"])
-                    }
+                "account": {
+                    "email": base64.b64decode(s["vbu"]),
+                    "password": base64.b64decode(s["vbp"])
                 }
+            }
             headers = {'content-type': 'application/json'}
             authorize = requests.post("http://203.223.33.249:8081/api2/auth", headers=headers, data=json.dumps(auth_data))
             token = json.loads(authorize.text)['auth_token']
             call_log_data = requests.get('http://203.223.33.249:8081/api2/call_logs/' + call_id + '?email=' + urllib.quote(base64.b64decode(s["vbu"]), safe='') + '&token=' + token) 
             call_data = {'ID':call_id, 'Duration(second)': request.args.get('CallDuration')}
-            public_fields_available = []
-            other_public_fields = ['welcome', 'hotline', 'disease', 'nchad']
-            hc_fields_available = []
             try:
                 data = json.loads(call_log_data.text)
                 call_data['Status'] = data['state']
-                call_data['Started'] = data['started_at'] 
+                call_data['Started'] = data['started_at'] #Let's use the one from the callback rather than the API
                 call_data['Caller ID'] = data['address']
                 print(json.loads(call_log_data.text))
                 for input in json.loads(call_log_data.text)['call_log_answers']:
                     field = input['project_variable_name']
                     value = input['value']
                     call_data[field] = value
-                    if (field[-4:] == 'case' or field[-5:] == 'death') and field[:2] == 'va':
-                        hc_fields_available.append(field)
-                    elif field[-4:] == 'menu' and not field.split("_")[0] in other_public_fields and not field.split("_")[0] in public_fields_available:
-                        public_fields_available.append(field.split("_")[0])
-                con = sqlite3.connect('logs115.db')
-                cur = con.cursor()
-                uhelpers.insertCallLog(cur, call_data, public_fields_available, hc_fields_available)
             except:
                 print('ERROR WITH CALLBACK')
                 dhelpers.sendEmail("callback error", 'error with callback ' + call_id + ": " + str(er), None, 'emily.aiken@instedd.org', None, None)
-            con.commit()
-            con.close()
+                response = app.response_class(status=200)
+                return response
+            print(uhelpers.loadLog(call_data))
     response = app.response_class(status=200)
     return response
+
 
 @app.route("/dataload", methods=["GET", "POST"])
 def dataload():
