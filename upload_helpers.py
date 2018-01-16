@@ -29,7 +29,7 @@ def deleteStar(disease_report):
 def parseDateTime(fulldate):
     if fulldate == "":
         return "", ""
-    else:
+    elif "/" in fulldate: #Call log format
         for i in range(len(fulldate)):
             if fulldate[i] == " ":
                 backwards_date = fulldate[0:i]
@@ -38,6 +38,17 @@ def parseDateTime(fulldate):
                 year = backwards_date[6:10]
                 forwards_date = year + '-' + month + '-' + day
                 return forwards_date, fulldate[i:len(fulldate)]
+    elif "Z" in fulldate: #Realtime callback format
+        try:
+            fulldate = fulldate[0:10] + " " + fulldate[11:19]
+            datestamp = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S') 
+            datestamp_cambodia = datestamp + datetime.timedelta(hours=7) #Can do this more elegantly
+            date = datetime.datetime.strftime(datestamp_cambodia, '%Y-%m-%d')
+            time = datetime.datetime.strptime(datestamp_cambodia, '%H:%M:%S')
+        except:
+            print('problem with date')
+            return "", ""
+        return date, time
     return "", ""
 
 def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_fields_available):
@@ -64,14 +75,15 @@ def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_field
         reports = ()
         report_something = "false"
         for var in hc_fields_available:
-            if call[var] == "": # Did not enter any of this disease
-                reports = reports + (0,)
-            else: # Some of disease reported
-                reports = reports + (deleteStar(call[var]),)
-                report_something = "true"
-        completed = "false"
-        if ((call['cdc_report_started'] == '1' and call['cdc_report_ended'] == '1') or (call['cdc_report_started'] != '1' and report_something == "true")):
-            completed = "true"
+            try:
+                if call[var] == "": # Did not enter any of this disease
+                    reports = reports + (0,)
+                else: # Some of disease reported
+                    reports = reports + (deleteStar(call[var]),)
+                    report_something = "true"
+            except: #Did not enter any of this disease - realtime callback
+                report = reports + (0, )
+        completed = "true"
         to_db = [(call['ID'], call['Caller ID'], completed, week_id) + reports]
         hc_attributes = ['call_id', 'caller_id', 'completed', 'week_id'] + hc_fields_available
         cur.executemany("INSERT INTO hc_reports (" + ", ".join(hc_attributes) + ") VALUES (" + ", ".join(["?" for atr in hc_attributes]) + ");", to_db)
@@ -81,10 +93,13 @@ def insertCallLog(cur, call, calls_attributes, public_fields_available, hc_field
         disease_menus = ['hotline_menu', 'disease_menu'] + [disease + "_menu" for disease in public_fields_available]
         interaction = ()
         for menu in disease_menus:
-            if call[menu] == "":
+            try:
+                if call[menu] == "":
+                    interaction = interaction + (None,) #did not reach this step - call logs
+                else:
+                    interaction = interaction + (call[menu],)
+            except: #Did not reach this step - realtime analytics
                 interaction = interaction + (None,)
-            else:
-                interaction = interaction + (call[menu],)
         to_db = [(call['ID'],) + interaction]
         cur.executemany("INSERT INTO public_interactions (" + ", ".join(['call_id'] + disease_menus) + ") VALUES (" + ", ".join(["?" for atr in ['call_id'] + disease_menus]) + ");", to_db)
 
@@ -97,7 +112,7 @@ def loadData(data_file_name):
     calls_attributes = ['call_id', 'date', 'datenum', 'month', 'year', 'time', 'week_id', 'duration', 'caller_id', 'status', 'type']
     calls_attributes_types = {'call_id':'integer primary key', 'date':'varchar', 'datenum': 'integer', 'month': 'varchar', 'year':'varchar', 'time':'time', 'week_id':'varchar', 'duration':'integer', 'caller_id':'integer', 
                         'status':'varchar', 'type':'varchar'}
-    req_attributes = ['ID', 'Started', 'Caller interaction', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'level_worker', 'cdc_report_started', 'cdc_report_ended']
+    req_attributes = ['ID', 'Started', 'Duration(second)', 'Caller ID', 'Status', 'hotline_menu', 'disease_menu', 'level_worker']
     # REFRESH
     #cur.execute("DROP TABLE calls;")
     #cur.execute("DROP TABLE hc_reports;")

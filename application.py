@@ -264,16 +264,22 @@ def callback():
             authorize = requests.post("http://203.223.33.249:8081/api2/auth", headers=headers, data=json.dumps(auth_data))
             token = json.loads(authorize.text)['auth_token']
             call_log_data = requests.get('http://203.223.33.249:8081/api2/call_logs/' + call_id + '?email=' + urllib.quote(base64.b64decode(s["vbu"]), safe='') + '&token=' + token) 
-            call_data = {}
+            call_data = {'ID':call_id, 'Duration(second)': request.args.get('CallDuration')}
             public_fields_available = []
             other_public_fields = ['welcome', 'hotline', 'disease', 'nchad']
             hc_fields_available = []
             try:
+                print("DATA FROM API")
                 print(json.loads(call_log_data.text))
+                data = json.loads(call_log_data.text)
+                call_data['Status'] = data['state']
+                starting_timestamp = data['started_at']
+                call_data['Started'] = data['started_at'] #Need to fix date format
+                call_data['Caller ID'] = data['address']
                 for input in json.loads(call_log_data.text)['call_log_answers']:
                     field = input['project_variable_name']
                     value = input['value']
-                    print(field + ": " + value)
+                    #print(field + ": " + value)
                     call_data[field] = value
                     if (field[-4:] == 'case' or field[-5:] == 'death') and field[:2] == 'va':
                         hc_fields_available.append(field)
