@@ -273,7 +273,7 @@ def callback():
                 print(json.loads(call_log_data.text))
                 data = json.loads(call_log_data.text)
                 call_data['Status'] = data['state']
-                starting_timestamp = data['started_at']
+                print("Started at: " + data['started_at'])
                 call_data['Started'] = data['started_at'] #Need to fix date format
                 call_data['Caller ID'] = data['address']
                 for input in json.loads(call_log_data.text)['call_log_answers']:
