@@ -231,7 +231,7 @@ def loadLog(calldict):
     try:
         con = sqlite3.connect("logs115.db")
         cur = con.cursor()
-        schema = [key for key, value in calldict].iteritems()
+        schema = [key for key, value in calldict.iteritems()]
         if checkReqAtr(schema) == False:
             con.close()
             return "Missing required attribute"
