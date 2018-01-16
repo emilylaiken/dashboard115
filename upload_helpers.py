@@ -240,7 +240,7 @@ def loadLog(calldict):
         con.close()
         return "Duplicate call"
     else:
-        insertCallLog(cur, call, public_fields_available, hc_fields_available)
+        insertCallLog(cur, calldict, public_fields_available, hc_fields_available)
         con.commit()
         con.close()
         return "Successfully loaded into DB"
