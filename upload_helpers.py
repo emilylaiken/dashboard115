@@ -43,7 +43,7 @@ def parseDateTime(fulldate):
             fulldate = fulldate[0:10] + " " + fulldate[11:19]
             print('here0')
             print(fulldate)
-            datestamp = datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S') 
+            datestamp = datetime.datetime.strptime(fulldate, '%Y-%m-%d %H:%M:%S') 
             print('here1')
             datestamp_cambodia = datestamp + datetime.timedelta(hours=7) #Can do this more elegantly
             print('here')
