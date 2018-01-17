@@ -20,7 +20,7 @@ def lineChartDownload(labels, data, seriesnames, colors, title, minx, maxx, fnam
     plt.title(title)
     plt.xticks(np.arange(0, len(labels), divisor), newlabels, rotation=45)
     plt.tick_params(labelsize=7)
-    #plt.annotate('...Additional information...', xy=(0, -1), xycoords=('axes fraction', 'figure fraction'), size=8)
+    plt.annotate('Something', (0,0), (0, -40), xycoords='axes fraction', textcoords='offset points', va='top')
     for i in range (0, len(data)):
         plt.plot(np.arange(0, len(labels)), data[i], label=seriesnames[i], color=colors[i], linewidth=1, marker='o')
     plt.savefig(fname)

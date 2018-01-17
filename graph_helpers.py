@@ -117,8 +117,8 @@ def publicLineChart(cur, table, condition_strings, starting_date_string, ending_
                 avg = 0
             else:
                 avg = sum(numcalls) / len(numcalls)
-    if target[-4:] == ".png":
-        png = chartmaker.lineChartDownload(list(dates), series, seriesnames, colors, title, starting_date_string, ending_date_string, target)
+    if target[-4:] == ".pdf":
+        pdf = chartmaker.lineChartDownload(list(dates), series, seriesnames, colors, title, starting_date_string, ending_date_string, target)
         return (total, avg)
     else:
         return lineChart(list(dates), series, seriesnames, colors, title, legend, starting_date_string, ending_date_string, target) + (total, avg)
@@ -163,8 +163,8 @@ def hotlineBreakdown(cur, table, labels, condition_strings, starting_date_string
     if dif != 0:
         values.append(dif)
         labels.append('No Action')
-    if target[-4:] == '.png':
-        png = chartmaker.pieChartDownload(labels, values, palette[0:len(values)], title, target)
+    if target[-4:] == '.pdf':
+        pdf = chartmaker.pieChartDownload(labels, values, palette[0:len(values)], title, target)
         return
     else:
         return pieChart(labels, values, palette[0:len(values)], title, target) + ("", "")

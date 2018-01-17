@@ -83,8 +83,9 @@ def parseDateTime(fulldate):
     elif "Z" in fulldate: #Realtime callback format
         fulldate = fulldate[0:10] + " " + fulldate[11:19]
         datestamp = datetime.datetime.strptime(fulldate, '%Y-%m-%d %H:%M:%S') 
-        datestamp_cambodia = datestamp + datetime.timedelta(hours=7) #Can do this more elegantly
+        datestamp_cambodia = datestamp + datetime.timedelta(hours=7) 
         date = datetime.datetime.strftime(datestamp_cambodia, '%Y-%m-%d')
+        print("DATE REGISTERED: " + date)
         time = datetime.datetime.strftime(datestamp_cambodia, '%H:%M:%S')
         return date, time
     return "", ""
