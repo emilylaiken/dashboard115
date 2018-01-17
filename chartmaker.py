@@ -13,7 +13,7 @@ def lineChartDownload(labels, data, seriesnames, colors, title, minx, maxx, fnam
     for i in range (0, len(labels)):
         if i % divisor == 0:
             newlabels.append(labels[i][2:])
-    plt.rcParams["figure.figsize"] = [8, 4]
+    plt.rcParams["figure.figsize"] = [8, 8]
     plt.rcParams['lines.markersize'] = 3
     fig = plt.figure()
     ax = plt.subplot(111)
