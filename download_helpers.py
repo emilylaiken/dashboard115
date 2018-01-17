@@ -30,18 +30,6 @@ import base64
 def append_pdf(input,output):
     [output.addPage(input.getPage(page_num)) for page_num in range(input.numPages)]
 
-# Make PDF out of a list of images
-def makePdf(pdfFileName, listPages, dir = ''):
-    if (dir):
-        dir += "/"
-    cover = Image.open(dir + str(listPages[0]))
-    width, height = cover.size
-    pdf = FPDF(unit = "pt", format = [width, height])
-    for page in listPages:
-        pdf.add_page()
-        pdf.image(dir + str(page), 0, 0)
-    pdf.output(dir + pdfFileName + ".pdf", "F")
-
 def appendStats(parts, styles, total, avg, label):
     parts.append(Paragraph("Total " + label + ": " + str(total), styles['paragraph']))
     parts.append(Spacer(1, 0.1*inch))
@@ -153,10 +141,6 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_emails, 
         total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Ambulance Information"], "Cals Requesting Ambulance Information by Day", False, str(chartid).zfill(2) + "ambulance.pdf")
         parts = appendStats(parts, styles, total, avg, "calls requesting ambulance information")
         con.close()
-        #print('creating graphs pdf', file=sys.stderr)
-        # Make PDF of all graphs
-        #print(chosenfigures)
-        #makePdf("graphs", list(sorted([figure + ".png" for figure in chosenfigures])))
         doc.build(parts)
         # Combine PDF with text (title page, qualitative, statistics) and PDF with graphs
         print('combining all pdfs', file=sys.stderr)

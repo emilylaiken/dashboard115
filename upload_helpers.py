@@ -85,7 +85,7 @@ def parseDateTime(fulldate):
         datestamp = datetime.datetime.strptime(fulldate, '%Y-%m-%d %H:%M:%S') 
         datestamp_cambodia = datestamp + datetime.timedelta(hours=7) 
         date = datetime.datetime.strftime(datestamp_cambodia, '%Y-%m-%d')
-        print("DATE REGISTERED: " + date)
+        print("DATE REGISTERED: " + date + " " + time)
         time = datetime.datetime.strftime(datestamp_cambodia, '%H:%M:%S')
         return date, time
     return "", ""
