@@ -42,7 +42,9 @@ def hcOntimeChart(cur, starting_date_string, ending_date_string, target):
     attempted_reports_by_week = cur.fetchall()
     weeks = column(completed_reports_by_week, 0)
     completed = column(completed_reports_by_week, 2)
+    completed = [entry if entry is not None else 0 for entry in completed]
     attempted = column(attempted_reports_by_week, 2)
+    attempted = [entry if entry is not None else 0 for entry in attempted]
     if target[-4:] == '.pdf':
         pdf = chartmaker.lineChartDownload([helpers.toWordDate(week) for week in weeks], [completed, attempted], ["On-Time Reports", "Late Reports"], palette[0:2], "HC Reports by Week - On-Time vs. Late", None, None, None, None, target)
     else:
@@ -71,7 +73,7 @@ def hcDiseaseChart(cur, starting_date_string, ending_date_string, addon, target)
     for key, value in reports.items():
         if key != 'dates':
             series.append(value)
-            labels.append(key.split("_")[1].title() + " " + key.split("_")[2].title() + "s")
+            labels.append(key.split("_")[1].title())
             colors.append(palette[i])
             i = i+1
     if target[-4:] == '.pdf':

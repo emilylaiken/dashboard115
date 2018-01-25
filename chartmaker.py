@@ -27,7 +27,7 @@ def lineChartDownload(labels, data, seriesnames, colors, title, minx, maxx, tota
     for i in range (0, len(data)):
         ax.plot(np.arange(0, len(labels)), data[i], label=seriesnames[i], color=colors[i], linewidth=1, marker='o')
     if len(seriesnames) > 1:
-        legend = ax.legend(loc='upper right')
+        legend = ax.legend(loc='best')
     plt.savefig(fname)
 
 def pieChartDownload(labels, data, colors, title, fname):
