@@ -5,6 +5,8 @@ import datetime
 import json
 from flask import Flask, redirect, render_template, request, url_for, send_file, session
 from passlib.hash import pbkdf2_sha256
+import os
+
 
 # If there is no login yet, sets login to "cdc" and "cdc", otherwise finds out what the current login is 
 def getCorrectLogin():
@@ -54,7 +56,7 @@ def getDiseases():
     with open('settings.json') as infile:
         settings  = json.load(infile)
         return [str(disease) for disease in settings['all_public']], [str(disease) for disease in settings['chosen_public']], [str(disease) for disease in settings['all_hc']], [str(disease) for disease in settings['chosen_hc']]
-        
+
 # Capitalize a string -- used as Jinja environment filter
 def capitalize(s):
     return str.title(s)
@@ -72,9 +74,11 @@ def years():
 def getCharts():
     _, public_diseases, _, hc_diseases = getDiseases()
     charts = [
+        ("overview", "Calls to entire hotline by day", "line"),
         ("hotlinebreakdown", "Breakdown of calls to entire hotline (HC workers vs. Public)", "pie"),
         ("publicbreakdown", "Breakdown of calls to public hotline", "pie"),
-        ("overview", "Calls to entire hotline by day", "line"),
+        ("statuspublic", "Calls by Status - Public", "pie"),
+        ("statushc", "Calls by Status - HC Workers", "pie"),
         ("public", "Calls to public hotline by day", "line")
     ]
     for disease in public_diseases:
@@ -82,8 +86,25 @@ def getCharts():
     charts = charts + [
         ("publicreports", "Public reports by day", "line"),
         ("moreinfo", "Calls requesting more information by day", "line"),
-        ("ambulance", "Calls requesting ambulance information by day", "line")
+        ("ambulance", "Calls requesting ambulance information by day", "line"),
+        ("hcontime", "HC Reports - On-time vs. Late", "line"),
+        ("hccase", "Reports of Disease Cases by Weak (HC Workers)", "line"),
+        ("hcdeath", "Reports of Disease Deaths by Weak (HC Workers)", "line")
     ]
     return charts
+
+def toWordDate(date):
+    timestamp = datetime.datetime.strptime(date, "%y-%m-%d")
+    return datetime.datetime.strftime(timestamp, "%b %d, %y")
+
+def getWeekId(date):
+    day_of_week = date.weekday()
+    week_id = datetime.datetime.strftime(date - datetime.timedelta(days=5 + day_of_week), '%y-%m-%d')
+    return week_id
+
+def cleanUp():
+    for f in os.listdir(os.getcwd()):
+        if f.endswith(".pdf"):
+            os.remove(f)
 
 

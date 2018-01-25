@@ -5,6 +5,7 @@ import sqlite3
 import datetime
 import helpers
 import json
+from random import randint
 
 # Defines the max attributes in each table in the DB
 def tbl_atr():
@@ -86,7 +87,6 @@ def parseDateTime(fulldate):
         datestamp_cambodia = datestamp + datetime.timedelta(hours=7) 
         date = datetime.datetime.strftime(datestamp_cambodia, '%Y-%m-%d')
         time = datetime.datetime.strftime(datestamp_cambodia, '%H:%M:%S')
-        print("DATE REGISTERED: " + date + " " + time)
         return date, time
     return "", ""
 
@@ -108,6 +108,7 @@ def checkReqAtr(call_log_vars):
     req_attributes = ['ID', 'Started', 'Duration(second)', 'Caller ID', 'Status', 'level_worker']
     for atr in req_attributes:
         if atr not in call_log_vars:
+            print("missing attribute " + atr)
             return False
     return True
 
@@ -154,12 +155,7 @@ def insertCallLog(cur, call, public_fields_available, hc_fields_available):
     date = dateTime[0]
     time = dateTime[1]
     # Calculate week ID (for grouping by weeks)
-    day_of_week = datetime.datetime.strptime(date, '%Y-%m-%d').weekday()
-    if day_of_week in [1, 2, 3]:
-        days_since_wed = day_of_week + 5
-    else:
-        days_since_wed = day_of_week - 2
-    week_id = datetime.datetime.strftime(datetime.datetime.strptime(date, '%Y-%m-%d') - datetime.timedelta(days=days_since_wed), '%y-%m-%d')
+    week_id = helpers.getWeekId(datetime.datetime.strptime(date, '%Y-%m-%d'))
     datenum = helpers.dtoi(date)
     # Decide which type of call it is--HC worker or public
     if (call['level_worker'] == '2'):
@@ -179,8 +175,8 @@ def insertCallLog(cur, call, public_fields_available, hc_fields_available):
                 reports = reports + (deleteStar(call[var]),)
         to_db = [(call['ID'], call['Caller ID'], week_id) + reports]
         hc_attributes = ['call_id', 'caller_id', 'week_id'] + hc_fields_available
+        #cur.execute("DELETE FROM hc_reports WHERE week_id='" + week_id + "' AND caller_id = " + call['Caller ID']) #Delete records of previous calls from this week because they are wrong
         cur.executemany("INSERT INTO hc_reports (" + ", ".join(hc_attributes) + ") VALUES (" + ", ".join(["?" for atr in hc_attributes]) + ");", to_db)
-        #cur.execute("UPDATE hc_reports SET " +  ", ".join([field + " = 0" for field in hc_fields_available]) + " WHERE caller_id = " + call['Caller ID'] + " AND week_id = " + week_id + ";")
     # Record public interaction with menus
     else:
         disease_menus = ['hotline_menu', 'disease_menu'] + [disease + "_menu" for disease in public_fields_available]
@@ -216,10 +212,11 @@ def loadCsv(data_file_name):
             if checkDuplicateLogs(cur, call['ID']) == True:
                 numDuplicates = numDuplicates + 1
             else:
+
                 insertCallLog(cur, call, public_fields_available, hc_fields_available)
-                numInserted = numInserted + 1
-    con.commit()
-    con.close()
+                numInserted = numInserted + 1  
+        con.commit()
+        con.close()
     # Messages to print on HTML template: number of calls inserted/duplicates, new public diseases detected, new HC diseases detected
     num_loaded_msg = "Number of call logs successfully loaded: " + str(numInserted) + ". Number of duplicates (not loaded): " + str(numDuplicates)+ "."
     new_public_msg = ""
@@ -253,3 +250,81 @@ def loadLog(calldict):
         con.commit()
         con.close()
         return "Successfully loaded into DB"
+
+def loadRandom(starting_date, ending_date):
+    con = sqlite3.connect("logs115.db")
+    cur = con.cursor()
+    refresh(cur)
+    dates = []
+    avg_calls_per_day = 500
+    starting_datestamp = datetime.datetime.strptime(starting_date, "%Y-%m-%d")
+    ending_datestamp = datetime.datetime.strptime(ending_date, "%Y-%m-%d")
+    while starting_datestamp <= ending_datestamp:
+        dates.append(datetime.datetime.strftime(starting_datestamp, "%Y-%m-%d"))
+        starting_datestamp = starting_datestamp + datetime.timedelta(days=1)
+    print(dates)
+    id = 0
+    for date in dates:
+        numcalls = avg_calls_per_day + randint(-100, 100)
+        for j in range (0, numcalls):
+            call = {}
+            call['ID'] = id
+            call['Started'] = date + "T00:00:00Z"
+            call['Duration(second)'] = randint(0, 100)
+            call['Caller ID'] = str(randint(0, 1000))
+            statusIndicator = randint(0, 2)
+            if statusIndicator == 0:
+                call['Status'] = 'completed'
+            elif statusIndicator == 1:
+                call['Status'] = 'incompleted'
+            else:
+                call['Status'] = 'terminated'
+            levelWorkerIndicator = randint(0, 2)
+            # Public call
+            if levelWorkerIndicator < 2:
+                call['level_worker'] = '0'
+                hotlineMenuIndicator = randint(1, 4)
+                call['hotline_menu'] = hotlineMenuIndicator
+                if hotlineMenuIndicator == 1:
+                    diseaseIndicator = randint(0, 2)
+                    actionIndicator = randint(0, 2)
+                    if diseaseIndicator == 0 and actionIndicator != 0:
+                        call['h5n1_menu'] = actionIndicator
+                    elif diseaseIndicator == 1 and actionIndicator != 0:
+                        call['mers_menu'] = actionIndicator
+                    elif diseaseIndicator == 2 and actionIndicator != 0:
+                        call['zika_menu'] = actionIndicator
+            # HC worker call
+            else:
+                call['level_worker'] = '2'
+                hc_diseases = ['var_dairrhea_case', 'var_dairrhea_death', 'var_fever_case', 'var_fever_death', 'var_flaccid_case', 'var_flaccid_death', 'var_respiratory_case', 'var_respiratory_death', 'var_meningetis_case', 'var_meningetis_death', 'var_juandice_case','var_juandice_death', 'var_malaria_case', 'var_malaria_death']
+                for disease in hc_diseases:
+                    if 'case' in disease:
+                        call[disease] = str(randint(0, 8))
+                    elif 'death' in disease:
+                        call[disease] = str(randint(0, 1))
+            if checkReqAtr([key for key, value in call.iteritems()]) != True:
+                print("Problem with req attributes")
+                return False
+            public_fields_available, hc_fields_available = availableFields([key for key, value in call.iteritems()])
+            addNewFields(cur, public_fields_available, hc_fields_available)
+            insertCallLog(cur, call, public_fields_available, hc_fields_available)
+            id = id + 1
+    con.commit()
+    con.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

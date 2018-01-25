@@ -19,6 +19,10 @@ import requests
 import urllib
 from passlib.hash import pbkdf2_sha256
 import base64
+import atexit
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+import psycopg2
 
 
 #App configurations--set folders and allowed extensions for file uploads
@@ -26,11 +30,42 @@ app = Flask(__name__)
 app.secret_key = 'secret key'
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 app.config['SESSION_TYPE'] = 'filesystem'
-    
+
+############ AUTOMATIC NOTIFICATIONS ############
+def sendNotification():
+    thresholdcases = -1
+    thresholddeaths = -1
+    con = sqlite3.connect('logs115.db')
+    cur = con.cursor()
+    week_id = helpers.getWeekId(datetime.datetime.now())
+    _, _, hc_diseases, _ = helpers.getDiseases()
+    totalcases = 0
+    for disease in [d for d in hc_diseases if "case" in d]:
+        cur.execute("SELECT SUM(" + disease + ") FROM hc_reports WHERE week_id='" + week_id + "'") 
+        diseasecases = cur.fetchall()
+        if diseasecases[0][0] is not None:
+            totalcases = totalcases + int(diseasecases[0][0])
+    totaldeaths = 0
+    for disease in [d for d in hc_diseases if "death" in d]:
+        cur.execute("SELECT SUM(" + disease + ") FROM hc_reports WHERE week_id='" + week_id + "'") 
+        diseasedeaths = cur.fetchall()
+        if diseasedeaths[0][0] is not None:
+            totaldeaths = totaldeaths + int(diseasedeaths[0][0])
+    if totalcases > thresholdcases or totaldeaths > thresholddeaths:
+        body_text = "There were an exceptional number of cases and/or deaths reported on the 115 holine this week (the week of " + week_id + "). " + str(totalcases) + " cases were reported and " + str(totaldeaths) + " deaths were reported. The threshold number of cases is " + str(thresholdcases) + " and the threshold number of deaths is " + str(thresholddeaths) + ". Visit the 115 hotline dashboard to change these thresholds."
+        dhelpers.sendEmail("115 Hotline - Exceptional Number of Cases/Deaths Reported", body_text, None, "emily.aiken@instedd.org", None, None)
+
+scheduler = BackgroundScheduler()
+scheduler.start()
+scheduler.add_job(sendNotification, 'cron', day_of_week='thu', hour=7) #Assuming GMT time zone
+#Shut down the scheduler when exiting the app
+atexit.register(lambda: scheduler.shutdown())
+
+
 ############ LOGIN PAGES ###########
 @app.route("/", methods=["GET", "POST"])
 def index():
-    # REFRESH
+    helpers.cleanUp()
     if request.method=="POST":
         # Extract correct username and password--if none have been set, default is "cdc" and "cdc"
         username, pwd = helpers.getCorrectLogin()
@@ -64,33 +99,6 @@ def changelogin():
     else:
         return render_template('changelogin.html')
 
-@app.route("/loadingmemory", methods=["GET", "POST"])
-def loadingmemory():
-    if request.method == 'GET':
-        return render_template('loadingmemory.html')
-    if request.method == 'POST':
-        print('loading in from memory')
-        memory_db = sqlite3.connect('logs::memory:?cache=shared')
-        cur = memory_db.cursor()
-        # Refresh
-        cur.execute("DROP TABLE calls")
-        cur.execute("DROP TABLE public_interactions")
-        cur.execute("DROP TABLE hc_reports")
-        cur.execute("DROP TABLE login")
-        cur.execute("DROP TABLE schemas")
-        disc_db = sqlite3.connect('logs115.db')
-        #df = pd.read_sql_query("select * from calls limit 5;", conn)
-        #print(df)
-        query = "".join(line for line in disc_db.iterdump())
-        memory_db.executescript(query)
-        cur.execute("SELECT COUNT(*) FROM calls;")
-        result = cur.fetchall()
-        print(result[0][0])
-        disc_db.close()
-        memory_db.close()
-        return 'done'
-
-
 ########## DASHBOARD PAGES: OVERVIEW, PUBLIC, AND HC REPORTS ##########
 @app.route('/overview', methods=["GET", "POST"])
 def overview():
@@ -101,21 +109,19 @@ def overview():
     if helpers.argsMissing():
         return redirect(helpers.redirectWithArgs('/overview'))
     # Open database
+    #uhelpers.loadRandom("2017-09-01", "2017-12-01")
     con = sqlite3.connect('logs115.db')
     cur = con.cursor()
     # Parse duration and dates from URL parameters
-    #cur.execute('SELECT calls.week_id, calls.caller_id, status, var_respiratory_death FROM calls JOIN hc_reports on calls.call_id=hc_reports.call_id WHERE var_respiratory_death > 100;')
-    #results = cur.fetchall()
-    #print(results)
     duration_string, title_addon = ghelpers.parseDuration(request.args.get('durationstart'), request.args.get('durationend'))
     starting_date_string = request.args.get('datestart')
     ending_date_string = request.args.get('dateend')
     figures = []
     # OVERVIEW CHARTS
     figures.append(ghelpers.publicLineChart(cur, 'all', ["call_id != ''"], starting_date_string, ending_date_string, duration_string, ["Calls to Entire Hotline"], "Calls to Entire Hotline by Day", False, "publicallcalls"))
-    figures.append(ghelpers.statusChart(cur,"public", starting_date_string, ending_date_string, duration_string))
-    figures.append(ghelpers.statusChart(cur,"healthcare workers", starting_date_string, ending_date_string, duration_string))
-    # Close database
+    figures.append(ghelpers.hotlineBreakdown(cur, 'all', ["Public Callers", "HC Workers"], [" type='public' ", " type='hc_worker' "], starting_date_string, ending_date_string, duration_string, "Hotline Breakdown", "hotlinebreakdown"))
+    figures.append(ghelpers.statusChart(cur,"public", starting_date_string, ending_date_string, duration_string, "statuspublic"))
+    figures.append(ghelpers.statusChart(cur,"healthcare workers", starting_date_string, ending_date_string, duration_string, "statushc"))
     con.close()
     return render_template("dashboardpage.html", figures=figures, ap = 'overviewlink')
 
@@ -138,6 +144,7 @@ def public():
     # PUBLIC CHARTS
     _, public_diseases, _, _ = helpers.getDiseases()
     figures.append(ghelpers.publicLineChart(cur, 'all', [" type='public' "], starting_date_string, ending_date_string, duration_string, ["Calls to Public Hotline"], "Calls to Public Hotline by Day", False, "publiccalls"))
+    figures.append(ghelpers.hotlineBreakdown(cur, 'public', ["Visit " + disease + " Information" for disease in public_diseases] + ['Make a Report', 'Request More Information', 'Request Ambulance Information'], [disease + "_menu IS NOT NULL" for disease in public_diseases] + ["hotline_menu='2'", "hotline_menu='3'", "hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, "Public Hotline Breakdown", "publicbreakdown"))
     for disease in sorted(public_diseases):
         figures.append(ghelpers.publicLineChart(cur, 'public', [disease + "_menu IS NOT NULL", disease + "_menu=1", disease + "_menu=2"], starting_date_string, ending_date_string, duration_string, ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"], "Calls to " + disease.title() + " Menu", True, "public" + disease))
     figures.append(ghelpers.publicLineChart(cur, 'public', ["hotline_menu='2'"], starting_date_string, ending_date_string, duration_string, ["Public Disease Reports"], "Public Disease Reports by Day", False, "publicreports"))
@@ -163,9 +170,9 @@ def hcreports():
     ending_date_string = request.args.get('dateend')
     figures = []
     # HC REPORT CHARTS
-    figures.append(ghelpers.hcOntimeChart(cur, starting_date_string, ending_date_string))
+    figures.append(ghelpers.hcOntimeChart(cur, starting_date_string, ending_date_string, "ontime"))
     for addon in ['_case', '_death']:
-        figures.append(ghelpers.hcDiseaseChart(cur, starting_date_string, ending_date_string, addon))
+        figures.append(ghelpers.hcDiseaseChart(cur, starting_date_string, ending_date_string, addon, "hc" + addon[1:]))
     # Close database
     con.close()
     return render_template("dashboardpage.html", figures=figures, ap = 'hcreportslink')
@@ -188,9 +195,7 @@ def download():
     charts = helpers.getCharts()
     for i in range (0, len(charts)):
         chart = charts[i]
-        print(str(i).zfill(2))
         charts_with_ids.append((str(i).zfill(2) + chart[0], chart[1], chart[2]))
-    print(charts_with_ids)
     return render_template("download.html", redirect_string = "/downloading?datestart=" + starting_date_string + "&dateend=" + ending_date_string, figureoptions=charts_with_ids)
 
 @app.route("/downloading", methods=["GET", "POST"])
@@ -201,25 +206,30 @@ def downloading():
     # Check for all necessary parameters
     if helpers.timeArgsMissing():
         return redirect(helpers.redirectWithArgs('/downloading'))
-    # Check for necessary elements from form
-    if request.form['email'] == None or request.form['email'] == "":
-        return render_template("downloadfail.html", message="Please enter an email address.")
-    try:
-        emails = request.form['email'].split(",")
-        ccs = request.form['cc'].split(",")
-        bccs = request.form['bcc'].split(",")
-    except:
-        return render_template("downloadfail.html", message="Please enter a single email or a comma-seperated list of emails for the recipient, cc, and bcc fields.")
-    # Fork thread to send email with PDF report
-    num_days = (datetime.datetime.strptime(request.args.get('dateend'), '%Y-%m-%d') - datetime.datetime.strptime(request.args.get('datestart'), '%Y-%m-%d')).days + 1
-    th = Thread(target=dhelpers.genReport, args=(request.args.get('datestart'), request.args.get('dateend'), request.form['qualitative'], request.form['email'], request.form['cc'], request.form['bcc'], url_for('downloaded'), num_days, [key for key in request.form if not key in ["qualitative", "email", "cc", "bcc"]]))
-    th.start()
-    return render_template("downloading.html")
+    if request.form['submit'] == 'Email Report':
+        # Check for necessary elements from form
+        if request.form['email'] == None or request.form['email'] == "":
+            return render_template("downloadfail.html", message="Please enter an email address.")
+        try:
+            emails = request.form['email'].split(",")
+            ccs = request.form['cc'].split(",")
+            bccs = request.form['bcc'].split(",")
+        except:
+            return render_template("downloadfail.html", message="Please enter a single email or a comma-seperated list of emails for the recipient, cc, and bcc fields.")
+        # Fork thread to send email with PDF report
+        th = Thread(target=dhelpers.genReport, args=(request.args.get('datestart'), request.args.get('dateend'), request.form['qualitative'], request.form['email'], request.form['cc'], request.form['bcc'], [key for key in request.form if not key in ["qualitative", "email", "cc", "bcc", "submit"]], 'email'))
+        th.start()
+        return render_template("downloading.html")
+    elif request.form['submit'] == 'Download Now':
+        filetitle = dhelpers.genReport(request.args.get('datestart'), request.args.get('dateend'), request.form['qualitative'], None, None, None, [key for key in request.form if not key in ["qualitative", "email", "cc", "bcc", "submit"]], 'download')
+        return redirect('/downloaded?filename=' + filetitle)
+    else:
+        return render_template("downloadfail.html", message="")
 
 @app.route("/downloaded", methods=["GET"])
 def downloaded():
     # Load PDF file to send in email
-    filetitle = request.args.get('filename') + ".pdf"
+    filetitle = request.args.get('filename')
     return send_file(filetitle, attachment_filename=filetitle, as_attachment=True)
     
 

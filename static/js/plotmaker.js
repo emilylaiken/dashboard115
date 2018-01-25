@@ -1,4 +1,4 @@
-function setUpChart(type, labels, data, seriesnames, colors, title, legend, minx, maxx, canvasid) {
+function setUpChart(type, labels, data, seriesnames, colors, title, legend, minx, maxx, xlabel, canvasid) {
     if (type == 'line') {
         var ctx = document.getElementById(canvasid);
         ctx.height = 100;
@@ -31,6 +31,16 @@ function setUpChart(type, labels, data, seriesnames, colors, title, legend, minx
                         }
                     }]
                 }
+        }
+        else if (xlabel != 'None') {
+            var scales = {
+                xAxes: [{
+                    scaleLabel: {
+                        display: true,
+                        labelString: xlabel
+                    }
+                }]
+            } 
         }
         else {
             var scales = {}

@@ -25,7 +25,7 @@
 		    	</tr>
 		    {% endfor %}
 			</table>
-		    <h4>  Email Information: </h4> 
+		    <h4>  Email Information (Optional): </h4> 
 		    <label for="email">To</label>
 		    <p> Enter a comma-seperated list of recipients. </p>
 		    <input type="email" multiple="multiple" class="form-control" name="email">
@@ -37,7 +37,11 @@
 		    <input type="bcc" multiple="multiple" class="form-control" name="bcc">
 		    <br />
 		    <br />
-		    <button type="submit" class="btn btn-default" >Email me the report</button>
+		    <p>
+		    <button type="submit" name="submit" class="btn btn-default" value="Download Now">Download Now</button>
+		    &nbsp; or &nbsp;
+		    <button type="submit" name="submit" class="btn btn-default" value="Email Report">Email Report</button>
+		</p>
 		</div>	
 	</form>
 	

@@ -32,26 +32,24 @@ def parseDuration(duration_start, duration_end):
     return (duration_string, title_addon)
 
 # Wrapper for line chart that is used to build ontime vs. late chart used on HC reports page
-def hcOntimeChart(cur, starting_date_string, ending_date_string):
-    cur.execute("SELECT calls.week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) == 2 OR CAST(strftime('%w', date) as integer) == 3)) GROUP BY calls.week_id ORDER BY calls.week_id asc;")
+def hcOntimeChart(cur, starting_date_string, ending_date_string, target):
+    subquery2 = "SELECT DISTINCT calls.week_id as week2 FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + " GROUP BY calls.week_id ORDER BY calls.week_id asc"
+    subquery1_completed = "SELECT calls.week_id as week1, count(calls.call_id) as count FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) == 2 OR CAST(strftime('%w', date) as integer) == 3)) GROUP BY calls.week_id ORDER BY calls.week_id asc"
+    subquery1_attempted = "SELECT calls.week_id as week1, count(calls.call_id) as count FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) < 2 OR CAST(strftime('%w', date) as integer) > 3)) GROUP BY calls.week_id ORDER BY calls.week_id asc"
+    cur.execute("SELECT * FROM (" + subquery2 + ") LEFT OUTER JOIN (" + subquery1_completed + ") ON week1 = week2;")
     completed_reports_by_week = cur.fetchall()
-    cur.execute("SELECT calls.week_id, count(calls.call_id) FROM calls JOIN hc_reports ON calls.call_id = hc_reports.call_id WHERE (datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "')" + "AND ((CAST(strftime('%w', date) as integer) < 2 OR CAST(strftime('%w', date) as integer) > 3)) GROUP BY calls.week_id ORDER BY calls.week_id asc;")
+    cur.execute("SELECT * FROM (" + subquery2 + ") LEFT OUTER JOIN (" + subquery1_attempted + ") ON week1 = week2;")
     attempted_reports_by_week = cur.fetchall()
     weeks = column(completed_reports_by_week, 0)
-    completed = column(completed_reports_by_week, 1)
-    attempted = column(attempted_reports_by_week, 1)
-    weeklabels = []
-    for week in weeks:
-        beginning_of_week = datetime.datetime.strptime(week[-8:], '%y-%m-%d')
-        end_of_week = beginning_of_week + datetime.timedelta(days=6)
-        if beginning_of_week.month == end_of_week.month: 
-            weeklabels.append(beginning_of_week.strftime('%b') + " " + beginning_of_week.strftime('%d') + " - " + end_of_week.strftime('%d') + ", " + beginning_of_week.strftime('%Y'))
-        else:
-            weeklabels.append(beginning_of_week.strftime('%b %d, %Y') + " - " + end_of_week.strftime('%b %d, %Y'))
-    return lineChart(weeks, [completed, attempted], ["On-Time Reports", "Late Reports"], palette[0:2], "HC Reports by Week - On-Time vs. Late", True, "None", "None", "completeness") + ("", "")
+    completed = column(completed_reports_by_week, 2)
+    attempted = column(attempted_reports_by_week, 2)
+    if target[-4:] == '.pdf':
+        pdf = chartmaker.lineChartDownload([helpers.toWordDate(week) for week in weeks], [completed, attempted], ["On-Time Reports", "Late Reports"], palette[0:2], "HC Reports by Week - On-Time vs. Late", None, None, None, None, target)
+    else:
+        return lineChart([helpers.toWordDate(week) for week in weeks], [completed, attempted], ["On-Time Reports", "Late Reports"], palette[0:2], "HC Reports by Week - On-Time vs. Late", True, "None", "None", "Date (Beginning of Week)", target) + ("", "")
 
 # Wrapper for line chart used to build two HC reports charts (one for cases, one for deaths) on HC reports page
-def hcDiseaseChart(cur, starting_date_string, ending_date_string, addon):
+def hcDiseaseChart(cur, starting_date_string, ending_date_string, addon, target):
     series = []
     # Initialize empty dictionary to hold reports
     reports = collections.OrderedDict()
@@ -76,7 +74,11 @@ def hcDiseaseChart(cur, starting_date_string, ending_date_string, addon):
             labels.append(key.split("_")[1].title() + " " + key.split("_")[2].title() + "s")
             colors.append(palette[i])
             i = i+1
-    return lineChart(reports['dates'], series, labels, colors, "Reports of Disease " + addon[1:].title() + "s by Week", True, "None", "None", "hc" + addon[1:]) + ("", "")
+    if target[-4:] == '.pdf':
+        pdf = chartmaker.lineChartDownload([helpers.toWordDate(week) for week in reports['dates']], series, labels, colors, "Reports of Disease " + addon[1:].title() + "s by Week", None, None, None, None, target)
+    else:
+        return lineChart([helpers.toWordDate(week) for week in reports['dates']], series, labels, colors, "Reports of Disease " + addon[1:].title() + "s by Week", True, "None", "None", "Date (Beginning of Week)", target) + ("", "")
+
 
 # Wrapper for line chart used to build all-calls chart on overview page and all charts on public page
 def publicLineChart(cur, table, condition_strings, starting_date_string, ending_date_string, duration_string, seriesnames, title, legend, target):
@@ -118,14 +120,15 @@ def publicLineChart(cur, table, condition_strings, starting_date_string, ending_
             else:
                 avg = sum(numcalls) / len(numcalls)
     if target[-4:] == ".pdf":
-        pdf = chartmaker.lineChartDownload(list(dates), series, seriesnames, colors, title, starting_date_string, ending_date_string, target)
-        return (total, avg)
+        pdf = chartmaker.lineChartDownload(list(dates), series, seriesnames, colors, title, starting_date_string, ending_date_string, total, avg, target)
+        return
     else:
-        return lineChart(list(dates), series, seriesnames, colors, title, legend, starting_date_string, ending_date_string, target) + (total, avg)
+        return lineChart(list(dates), series, seriesnames, colors, title, legend, starting_date_string, ending_date_string, "None", target) + (total, avg)
 
 # Calls charts.js script to build a line chart given raw data series and layout info
-def lineChart(labels, data, seriesnames, colors, title, legend, minx, maxx, canvasid):
+def lineChart(labels, data, seriesnames, colors, title, legend, minx, maxx, xlabel, canvasid):
     type_str = '"line"'
+    # Each individual label is given as a list, meaning it must be structured for string wrapping
     labels_str = "[" + ", ".join(['"' + str(label) + '"' for label in labels]) + "]"
     data_str = "[" + ", ".join(["[" + ", ".join([str(point) for point in series]) + "]" for series in data]) + "]"
     seriesnames_str = '[' + ", ".join(['"' + name + '"' for name in seriesnames]) + ']'
@@ -136,8 +139,9 @@ def lineChart(labels, data, seriesnames, colors, title, legend, minx, maxx, canv
     else:
         legend_str = '"False"'
     minx_str, maxx_str = '"' + minx + '"', '"' + maxx + '"'
+    xlabel_str = '"' + xlabel + '"'
     canvasid_str = '"' + canvasid + '"'
-    javascript_func = "setUpChart(" + type_str + ", " + labels_str + ", " + data_str + ", " + seriesnames_str + ", " + colors_str + ", " +  title_str + ", " + legend_str + ", " + minx_str + ", " + maxx_str + ", " + canvasid_str +  ");"
+    javascript_func = "setUpChart(" + type_str + ", " + labels_str + ", " + data_str + ", " + seriesnames_str + ", " + colors_str + ", " +  title_str + ", " + legend_str + ", " + minx_str + ", " + maxx_str + ", " + xlabel_str + ", " + canvasid_str +  ");"
     return canvasid_str, javascript_func
 
 # Wrapper for pie charts used to break down actions of users to portion of hotline
@@ -170,7 +174,7 @@ def hotlineBreakdown(cur, table, labels, condition_strings, starting_date_string
         return pieChart(labels, values, palette[0:len(values)], title, target) + ("", "")
 
 # Wrapper for pie chart used to build charts describing percentages of calls in each status
-def statusChart(cur, table, starting_date_string, ending_date_string, duration_string):
+def statusChart(cur, table, starting_date_string, ending_date_string, duration_string, target):
     data = []
     statuses = ['completed', 'incompleted', 'terminated']
     if table == 'public':
@@ -181,7 +185,10 @@ def statusChart(cur, table, starting_date_string, ending_date_string, duration_s
         cur.execute("SELECT count(calls.call_id) FROM calls JOIN " + table_name + " ON calls.call_id = " + table_name + ".call_id WHERE datenum >= " + "'" + helpers.dtoi(starting_date_string) + "'" + " AND datenum <= " + "'" + helpers.dtoi(ending_date_string) + "'" + duration_string + " AND status == '" + unicode(status) + "';")
         calls_by_status = cur.fetchall()
         data.append(calls_by_status[0][0])
-    return pieChart([status.title() for status in statuses], data, palette[0:len(statuses)], "Calls by Status - " + table.title(), "callsbystatus" + table[0]) + ("", "")
+    if target[-4:] == '.pdf':
+        pdf = chartmaker.pieChartDownload([status.title() for status in statuses], data, palette[0:len(statuses)], "Calls by Status - " + table.title(), target)
+    else:
+        return pieChart([status.title() for status in statuses], data, palette[0:len(statuses)], "Calls by Status - " + table.title(), target) + ("", "")
 
 # Calls charts.js script to build a pie chart given raw data series and layout info
 def pieChart(labels, data, colors, title, canvasid):
@@ -193,6 +200,7 @@ def pieChart(labels, data, colors, title, canvasid):
     minx_str, maxx_str = '"None"', '"None"'
     colors_str = '[' + ", ".join(['"' + color + '"' for color in colors]) + ']'
     title_str = '"' + title + '"'
+    xlabel_str = '"None"'
     canvasid_str = '"' + canvasid + '"'
-    javascript_func = "setUpChart(" + type_str + ", " + labels_str + ", " + data_str + ", " + seriesnames_str + ", " + colors_str + ", " +  title_str + ", " + legend_str + ", " + minx_str + ", " + maxx_str + ", " + canvasid_str +  ");"
+    javascript_func = "setUpChart(" + type_str + ", " + labels_str + ", " + data_str + ", " + seriesnames_str + ", " + colors_str + ", " +  title_str + ", " + legend_str + ", " + minx_str + ", " + maxx_str + ", " + xlabel_str + ", " + canvasid_str +  ");"
     return canvasid_str, javascript_func

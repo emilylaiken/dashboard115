@@ -1,6 +1,5 @@
 from __future__ import print_function
 import sys
-import os
 import sqlite3
 import datetime
 from fpdf import FPDF
@@ -29,24 +28,6 @@ import base64
 # Append PDFs (input files) to a PDF file writer (output)
 def append_pdf(input,output):
     [output.addPage(input.getPage(page_num)) for page_num in range(input.numPages)]
-
-def appendStats(parts, styles, total, avg, label):
-    parts.append(Paragraph("Total " + label + ": " + str(total), styles['paragraph']))
-    parts.append(Spacer(1, 0.1*inch))
-    parts.append(Paragraph("Average: " + label + " (by day): " + str(avg), styles['paragraph']))
-    parts.append(Spacer(1, 0.3*inch))
-    return parts
-
-# Creates single-series line chart in PNG, generates statistics, and appends statistics to parts
-def addSingleSeriesChart(table, condition_string, starting_date_string, ending_date_string, numdays, title, fname, parts, styles):
-    duration_string, title_addon = ghelpers.parseDuration('0', 'end')
-    chart_sql, total_sql, avg_sql = ghelpers.generateSQL(table, starting_date_string, ending_date_string, duration_string, condition_string)
-    total, avg = ghelpers.generateFiguresDownload(chart_sql, total_sql, avg_sql, title + " By Day " + title_addon, fname, numdays, [starting_date_string, ending_date_string])
-    parts.append(Paragraph("Total " + title + ": " + str(total), styles['paragraph']))
-    parts.append(Spacer(1, 0.3*inch))
-    parts.append(Paragraph("Average " + title + " (by day): " + str(avg), styles['paragraph']))
-    parts.append(Spacer(1, 0.3*inch))
-    return parts
 
 # Sends email given subject line, text, distination email, and optional filetitle
 def sendEmail(subject, body_text, filetitle, to_email, cc, bcc):
@@ -79,7 +60,7 @@ def sendEmail(subject, body_text, filetitle, to_email, cc, bcc):
     server.sendmail(fromaddr, toaddr, text)
     server.quit()
 
-def genReport(starting_date_string, ending_date_string, qualitative, to_emails, cc, bcc, target_url, numdays, chosenfigures):
+def genReport(starting_date_string, ending_date_string, qualitative, to_emails, cc, bcc, chosenfigures, target):
     # File title includes current timestamp for unique identification
     now = datetime.datetime.now()
     filetitle = "report" + now.strftime("%d-%m-%y-%H-%M-%S") + ".pdf"
@@ -88,13 +69,10 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_emails, 
     if True:
         doc = SimpleDocTemplate("hello.pdf", pagesize=letter)
         parts = []
-        folder = os.path.dirname(reportlab.__file__) + os.sep + 'fonts'   
-        ttfFile = os.path.join(folder, 'Vera.ttf')   
-        pdfmetrics.registerFont(TTFont("Vera", ttfFile))
         styles = {
-            'paragraph': ParagraphStyle('paragraph', fontName='Vera', fontSize=10, alignment=TA_LEFT),
-            'title': ParagraphStyle('title', fontName='Vera', fontSize=20, alignment=TA_CENTER),
-            'report_title': ParagraphStyle('report_title', fontName='Vera', fontSize=30, alignment=TA_CENTER),
+            'paragraph': ParagraphStyle('paragraph', fontName='Helvetica', fontSize=10, alignment=TA_LEFT),
+            'title': ParagraphStyle('title', fontName='Helvetica', fontSize=20, alignment=TA_CENTER),
+            'report_title': ParagraphStyle('report_title', fontName='Helvetica', fontSize=30, alignment=TA_CENTER),
         }
         #Title Page
         parts.append(Spacer(1, 3*inch))
@@ -106,9 +84,7 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_emails, 
         parts.append(Paragraph("Qualitative Description", styles['title']))
         parts.append(Spacer(1, inch))
         parts.append(Paragraph(qualitative, styles['paragraph']))
-        parts.append(PageBreak())
-        parts.append(Paragraph("Summary Statistics", styles['title']))
-        parts.append(Spacer(1, inch))
+        doc.build(parts)
         #Rest of report: statistics and graphs
         con = sqlite3.connect("logs115.db")
         cur = con.cursor()
@@ -116,32 +92,35 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_emails, 
         duration_string, title_addon = ghelpers.parseDuration('0', 'end')
         _, public_diseases, _, _ = helpers.getDiseases()
         chartid = 0
+        ghelpers.publicLineChart(cur, "all", ["call_id != ''"], starting_date_string, ending_date_string, duration_string, ["Calls to Hotline"], "Calls to Hotline by Day", False, str(chartid).zfill(2) + "overview.pdf")
+        chartid = chartid + 1
         # Breakdown pie charts
         ghelpers.hotlineBreakdown(cur, 'all', ["Public Callers", "HC Workers"], [" type='public' ", " type='hc_worker' "], starting_date_string, ending_date_string, duration_string, "Hotline Breakdown", str(chartid).zfill(2) + "hotlinebreakdown.pdf")
         chartid = chartid + 1
         ghelpers.hotlineBreakdown(cur, 'public', ["Visit " + disease + " Information" for disease in public_diseases] + ['Make a Report', 'Request More Information', 'Request Ambulance Information'], [disease + "_menu IS NOT NULL" for disease in public_diseases] + ["hotline_menu='2'", "hotline_menu='3'", "hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, "Public Hotline Breakdown", str(chartid).zfill(2) + "publicbreakdown.pdf")
         chartid = chartid + 1
+        # Status chart
+        ghelpers.statusChart(cur,"public", starting_date_string, ending_date_string, duration_string, str(chartid).zfill(2) + "statuspublic.pdf")
+        chartid = chartid + 1
+        ghelpers.statusChart(cur,"healthcare workers", starting_date_string, ending_date_string, duration_string, str(chartid).zfill(2) + "statushc.pdf")
+        chartid = chartid + 1
         # Line charts and statistics
-        total, avg = ghelpers.publicLineChart(cur, "all", ["call_id != ''"], starting_date_string, ending_date_string, duration_string, ["Calls to Hotline"], "Calls to Hotline by Day", False, str(chartid).zfill(2) + "overview.pdf")
+        ghelpers.publicLineChart(cur, "all", [" type='public' "], starting_date_string, ending_date_string, duration_string, ["Calls to Public Hotline"], "Calls to Public Hotline by Day", False, str(chartid).zfill(2) + "public.pdf")
         chartid = chartid + 1
-        parts = appendStats(parts, styles, total, avg, "calls to entire hotline")
-        total, avg = ghelpers.publicLineChart(cur, "all", [" type='public' "], starting_date_string, ending_date_string, duration_string, ["Calls to Public Hotline"], "Calls to Public Hotline by Day", False, str(chartid).zfill(2) + "public.pdf")
-        chartid = chartid + 1
-        parts = appendStats(parts, styles, total, avg, "calls to public hotline")
         for disease in public_diseases:
-            total, avg = ghelpers.publicLineChart(cur, "public", [disease + "_menu IS NOT NULL", disease + "_menu=1", disease + "_menu=2"], starting_date_string, ending_date_string, duration_string, ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"], "Calls to " + disease.title() + " Menu by Day", False, str(chartid).zfill(2) + disease + ".pdf")
+            ghelpers.publicLineChart(cur, "public", [disease + "_menu IS NOT NULL", disease + "_menu=1", disease + "_menu=2"], starting_date_string, ending_date_string, duration_string, ["Visit Menu", "Listen to Overview Info", "Listen to Prevention Info"], "Calls to " + disease.title() + " Menu by Day", False, str(chartid).zfill(2) + disease + ".pdf")
             chartid = chartid + 1
-            parts = appendStats(parts, styles, total, avg, "visitors to " + disease.title() + " menu")
-        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='2'"], starting_date_string, ending_date_string, duration_string, ["Public Disease Reports"], "Public Disease Reports by Day", False, str(chartid).zfill(2) + "publicreports.pdf")
+        ghelpers.publicLineChart(cur, "public", ["hotline_menu='2'"], starting_date_string, ending_date_string, duration_string, ["Public Disease Reports"], "Public Disease Reports by Day", False, str(chartid).zfill(2) + "publicreports.pdf")
         chartid = chartid + 1
-        parts = appendStats(parts, styles, total, avg, "public disease reports")
-        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='3'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Additional Information"], "Cals Requesting Additional Information by Day", False, str(chartid).zfill(2) + "moreinfo.pdf")
+        ghelpers.publicLineChart(cur, "public", ["hotline_menu='3'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Additional Information"], "Cals Requesting Additional Information by Day", False, str(chartid).zfill(2) + "moreinfo.pdf")
         chartid = chartid + 1
-        parts = appendStats(parts, styles, total, avg, "calls requesting additional information")
-        total, avg = ghelpers.publicLineChart(cur, "public", ["hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Ambulance Information"], "Cals Requesting Ambulance Information by Day", False, str(chartid).zfill(2) + "ambulance.pdf")
-        parts = appendStats(parts, styles, total, avg, "calls requesting ambulance information")
+        ghelpers.publicLineChart(cur, "public", ["hotline_menu='4'"], starting_date_string, ending_date_string, duration_string, ["Calls Requesting Ambulance Information"], "Cals Requesting Ambulance Information by Day", False, str(chartid).zfill(2) + "ambulance.pdf")
+        chartid = chartid + 1
+        ghelpers.hcOntimeChart(cur, starting_date_string, ending_date_string, str(chartid).zfill(2) + "hcontime.pdf")
+        for addon in ['_case', '_death']:
+            chartid = chartid + 1
+            ghelpers.hcDiseaseChart(cur, starting_date_string, ending_date_string, addon, str(chartid).zfill(2) + "hc" + addon[1:] + ".pdf")
         con.close()
-        doc.build(parts)
         # Combine PDF with text (title page, qualitative, statistics) and PDF with graphs
         print('combining all pdfs', file=sys.stderr)
         output = PdfFileWriter()
@@ -149,13 +128,16 @@ def genReport(starting_date_string, ending_date_string, qualitative, to_emails, 
         for graph in list(sorted([figure + ".pdf" for figure in chosenfigures])):
             append_pdf(PdfFileReader(open(graph,"rb")),output)
         output.write(open(filetitle,"wb"))
-        # Send email
-        sendEmail("Your 115 Hotline Report", "The PDF report you requested is attached to this email.", filetitle, to_emails, cc, bcc)
+        if target == 'email':
+            # Send email
+            sendEmail("Your 115 Hotline Report", "The PDF report you requested is attached to this email.", filetitle, to_emails, cc, bcc)
+            print('done!', file=sys.stderr)
+            helpers.cleanUp()
+            return
+        else:
+            return filetitle
     # If there is an error while generating the report, notify the person who requested it via email
     #except:
         #sendEmail("115 Hotline Report - Error", "Unfortunately, there was an error while generating your 115 hotline report. Please try again later.", None, to_email)
-    print('done!', file=sys.stderr)
+
     # Clean up working directory
-    for f in os.listdir(os.getcwd()):
-        if f.endswith(".png") or f.endswith(".pdf"):
-            os.remove(f)
