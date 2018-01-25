@@ -1,3 +1,5 @@
+## TODO: BETTER ERROR CATCHING ON THIS PAGE
+
 from __future__ import print_function
 import sys
 import sqlite3

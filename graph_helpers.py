@@ -46,7 +46,7 @@ def hcOntimeChart(cur, starting_date_string, ending_date_string, target):
     attempted = column(attempted_reports_by_week, 2)
     attempted = [entry if entry is not None else 0 for entry in attempted]
     if target[-4:] == '.pdf':
-        pdf = chartmaker.lineChartDownload([helpers.toWordDate(week) for week in weeks], [completed, attempted], ["On-Time Reports", "Late Reports"], palette[0:2], "HC Reports by Week - On-Time vs. Late", None, None, None, None, target)
+        pdf = chartmaker.lineChartDownload(weeks, [completed, attempted], ["On-Time Reports", "Late Reports"], palette[0:2], "HC Reports by Week - On-Time vs. Late", None, None, None, None, target)
     else:
         return lineChart([helpers.toWordDate(week) for week in weeks], [completed, attempted], ["On-Time Reports", "Late Reports"], palette[0:2], "HC Reports by Week - On-Time vs. Late", True, "None", "None", "Date (Beginning of Week)", target) + ("", "")
 
@@ -77,7 +77,7 @@ def hcDiseaseChart(cur, starting_date_string, ending_date_string, addon, target)
             colors.append(palette[i])
             i = i+1
     if target[-4:] == '.pdf':
-        pdf = chartmaker.lineChartDownload([helpers.toWordDate(week) for week in reports['dates']], series, labels, colors, "Reports of Disease " + addon[1:].title() + "s by Week", None, None, None, None, target)
+        pdf = chartmaker.lineChartDownload(reports['dates'], series, labels, colors, "Reports of Disease " + addon[1:].title() + "s by Week", None, None, None, None, target)
     else:
         return lineChart([helpers.toWordDate(week) for week in reports['dates']], series, labels, colors, "Reports of Disease " + addon[1:].title() + "s by Week", True, "None", "None", "Date (Beginning of Week)", target) + ("", "")
 
